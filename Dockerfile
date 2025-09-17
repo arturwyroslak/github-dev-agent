@@ -14,7 +14,7 @@ RUN apk add --no-cache python3 make g++
 COPY backend/package*.json ./
 
 # Install dependencies with frozen lockfile
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 # Copy backend source
 COPY backend/ .
