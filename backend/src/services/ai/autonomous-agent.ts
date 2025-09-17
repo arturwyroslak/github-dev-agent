@@ -178,7 +178,7 @@ Wybierz JEDNĄ strategię i wyjaśnij dlaczego w 2 zdaniach.`;
       return this.buildStrategy(strategyName, reasoning, context);
       
     } catch (error) {
-      this.logger.warn('Nie można określić strategii, używam default:', error);
+      this.logger.warn('Nie można określić strategii, używam default:', { error: error instanceof Error ? error.message : String(error) });
       return this.buildStrategy('incremental', 'Default fallback strategy', context);
     }
   }
@@ -617,7 +617,7 @@ Odpowiedz w formacie JSON z wybraną strategią i uzasadnieniem.`;
   private async parseDeepAnalysis(aiResponse: string): Promise<DeepAnalysisResult> {
     try {
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) throw new Error('No JSON found');
+      if (!jsonMatch || !jsonMatch[1]) throw new Error('No JSON found');
       
       return JSON.parse(jsonMatch[1]);
     } catch (error) {
@@ -670,7 +670,7 @@ ${i + 1}. Task: ${r.taskId}
   private async parseLearningFromAI(aiResponse: string): Promise<any> {
     try {
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) return this.createDefaultLearning();
+      if (!jsonMatch || !jsonMatch[1]) return this.createDefaultLearning();
       return JSON.parse(jsonMatch[1]);
     } catch {
       return this.createDefaultLearning();
@@ -761,14 +761,14 @@ ${i + 1}. Task: ${r.taskId}
         }
       });
     } catch (error) {
-      this.logger.warn('Cannot store learning in MCP:', error);
+      this.logger.warn('Cannot store learning in MCP:', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 
   private async parseRecoveryStrategy(aiResponse: string): Promise<any> {
     try {
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) throw new Error('No JSON found');
+      if (!jsonMatch || !jsonMatch[1]) throw new Error('No JSON found');
       return JSON.parse(jsonMatch[1]);
     } catch {
       return {

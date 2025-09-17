@@ -828,6 +828,13 @@ router.post('/test-goal', [
     }
     const randomGoal = goals[Math.floor(Math.random() * goals.length)];
     
+    if (!randomGoal) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to select random goal'
+      });
+    }
+    
     // Uruchom test z niskim limitem czasu
     const result = await autonomousAgent.achieveGoal(
       randomGoal,

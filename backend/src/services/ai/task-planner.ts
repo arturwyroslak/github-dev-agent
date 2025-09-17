@@ -262,7 +262,7 @@ export class TaskPlanner extends EventEmitter {
     ], { temperature: 0.2, maxTokens: 2000 });
     
     // Parsuj analizę z AI
-    const reflection = await this.parseReflectionFromAI(response.content);
+    const reflection = await this.parseReflectionFromAI(response.content, results);
     
     this.logger.info('Self-reflection result:', {
       goalAchieved: reflection.goalAchieved,
@@ -489,8 +489,8 @@ CEL DO OSIĄGNIĘCIA: "${goal}"`;
     try {
       // Wyciągnij JSON z odpowiedzi
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) {
-        throw new Error('Nie znaleziono JSON w odpowiedzi AI');
+      if (!jsonMatch || !jsonMatch[1]) {
+        throw new Error('No valid JSON found in plan response');
       }
       
       const planData = JSON.parse(jsonMatch[1]);
@@ -546,10 +546,10 @@ CEL DO OSIĄGNIĘCIA: "${goal}"`;
   /**
    * Parsuje wyniki refleksji z AI
    */
-  private async parseReflectionFromAI(aiResponse: string): Promise<ReflectionResult> {
+  private async parseReflectionFromAI(aiResponse: string, results: TaskExecutionResult[] = []): Promise<ReflectionResult> {
     try {
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) {
+      if (!jsonMatch || !jsonMatch[1]) {
         throw new Error('Nie znaleziono JSON w odpowiedzi refleksji');
       }
       
@@ -619,8 +619,17 @@ CEL DO OSIĄGNIĘCIA: "${goal}"`;
       throw new Error('MCP Manager nie jest dostępny');
     }
     
+    if (!task.parameters) {
+      throw new Error('Task parameters are required for MCP operation');
+    }
+    
     const { server, tool, arguments: args } = task.parameters;
-    const result = await this.mcpManager.callTool(server, { name: tool, arguments: args });
+    
+    if (!server || !tool) {
+      throw new Error('Server and tool parameters are required for MCP operation');
+    }
+    
+    const result = await this.mcpManager.callTool(server, { name: tool, arguments: args || {} });
     
     return JSON.stringify(result, null, 2);
   }
@@ -707,7 +716,7 @@ CEL DO OSIĄGNIĘCIA: "${goal}"`;
       });
       
     } catch (error) {
-      this.logger.warn('Nie można zapisać wykonania w MCP:', error);
+      this.logger.warn('Nie można zapisać wykonania w MCP:', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 

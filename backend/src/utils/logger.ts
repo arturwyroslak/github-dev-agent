@@ -165,7 +165,7 @@ export class Logger {
         name: error.name,
         message: error.message,
         stack: error.stack,
-        ...(error.cause && { cause: error.cause })
+        ...(error.cause && typeof error.cause === 'object' ? { cause: error.cause } : {})
       };
     } else if (error) {
       errorMeta.error = error;

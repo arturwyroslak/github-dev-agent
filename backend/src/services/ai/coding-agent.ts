@@ -99,7 +99,7 @@ Odpowiedz TYLKO nazwą intencji.`;
       this.logger.debug(`Wykryta intencja: ${intent}`);
       return intent;
     } catch (error) {
-      this.logger.warn('Nie można określić intencji, używam default:', error);
+      this.logger.warn('Nie można określić intencji, używam default:', { error: error instanceof Error ? error.message : String(error) });
       return 'code_generation';
     }
   }
@@ -578,7 +578,7 @@ Odpowiedz TYLKO nazwą intencji.`;
       });
       
     } catch (error) {
-      this.logger.warn('Nie można zapisać w MCP:', error);
+      this.logger.warn('Nie można zapisać w MCP:', { error: error instanceof Error ? error.message : String(error) });
     }
   }
 

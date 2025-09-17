@@ -91,11 +91,16 @@ export class PollinationsAIClient {
       messages.splice(1, 0, ...context.conversationHistory);
     }
 
-    return this.chat(messages, {
+    const options: any = {
       temperature: 0.3, // Niższa temperatura dla bardziej precyzyjnego kodu
-      maxTokens: 6000,
-      seed: context.projectSeed // Spójność w ramach projektu
-    });
+      maxTokens: 6000
+    };
+    
+    if (context.projectSeed !== undefined) {
+      options.seed = context.projectSeed;
+    }
+    
+    return this.chat(messages, options);
   }
 
   /**
