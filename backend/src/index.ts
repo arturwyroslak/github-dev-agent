@@ -15,7 +15,7 @@ import autonomousRoutes from './routes/autonomous';
 
 // Import services
 import { Logger } from './utils/logger';
-import { MCPManager, defaultMCPServers } from './modules/mcp';
+import { MCPManager, defaultMCPServers, createDefaultMCPConfig } from './modules/mcp';
 import { codingAgent } from './services/ai/coding-agent';
 
 // Load environment variables
@@ -270,8 +270,8 @@ async function initializeMCP(): Promise<void> {
       return;
     }
 
-    mcpManager = new MCPManager();
-    await mcpManager.initialize(enabledServers);
+    mcpManager = new MCPManager(createDefaultMCPConfig());
+    await mcpManager.initialize();
     
     // Connect coding agent to MCP
     (codingAgent as any).mcpManager = mcpManager;

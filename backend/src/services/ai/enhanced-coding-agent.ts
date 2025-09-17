@@ -82,7 +82,18 @@ export class EnhancedCodingAgent extends EventEmitter {
         intent: 'error',
         mode: 'error',
         processingTime: Date.now() - startTime,
-        analysis,
+        analysis: {
+          complexityScore: 0,
+          isMultiStep: false,
+          requiresResearch: false,
+          requiresMCP: false,
+          estimatedDurationMinutes: 0,
+          goalType: 'simple_task',
+          keyComponents: [],
+          riskFactors: ['error_during_processing'],
+          suggestedApproach: 'retry_with_simpler_approach',
+          confidenceLevel: 0
+        },
         metadata: {
           sessionId,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -139,7 +150,7 @@ Format JSON:
       return this.parseComplexityAnalysis(response.content);
       
     } catch (error) {
-      this.logger.warn('Błąd analizy złożoności, używam fallback:', error);
+      this.logger.warn('Błąd analizy złożoności, używam fallback:', { error: error instanceof Error ? error.message : String(error) });
       return this.createFallbackComplexityAnalysis(query);
     }
   }
@@ -220,6 +231,7 @@ Format JSON:
     analysis: ComplexityAnalysis,
     options: EnhancedAgentOptions
   ): Promise<EnhancedAgentResponse> {
+    const reflectionStartTime = Date.now();
     this.logger.info(`[ENHANCED-${sessionId}] 💬 STANDARD MODE z reflection`);
     
     // Standardowy chat response
@@ -252,11 +264,12 @@ Format JSON:
         content: improvedResponse.content,
         intent: improvedResponse.intent,
         mode: 'standard',
+        processingTime: Date.now() - reflectionStartTime,
         analysis,
         reflection,
         originalResponse: chatResponse.content,
         improvements: reflection.suggestions,
-        suggestions: improvedResponse.suggestions,
+        suggestions: improvedResponse.suggestions || [],
         metadata: {
           sessionId,
           improvedFromReflection: true,
@@ -272,9 +285,10 @@ Format JSON:
       content: chatResponse.content,
       intent: chatResponse.intent,
       mode: 'standard',
+      processingTime: Date.now() - reflectionStartTime,
       analysis,
       reflection,
-      suggestions: chatResponse.suggestions,
+      suggestions: chatResponse.suggestions || [],
       metadata: {
         sessionId,
         reflectionScore: reflection.overallScore,
@@ -338,7 +352,7 @@ Format JSON:
       return this.parseResponseReflection(reflectionResponse.content);
       
     } catch (error) {
-      this.logger.warn('Błąd response reflection:', error);
+      this.logger.warn('Błąd response reflection:', { error: error instanceof Error ? error.message : String(error) });
       return this.createFallbackReflection(response);
     }
   }
@@ -379,8 +393,7 @@ Stwórz ulepszyną wersję:`;
       const improvedResponse = await pollinationsAI.askCodingAgent(
         improvementPrompt,
         {
-          currentTask: 'response_improvement',
-          originalIntent: originalResponse.intent
+          currentTask: 'response_improvement'
         }
       );
       
@@ -498,7 +511,7 @@ Stwórz profesjonalny, actionable response dla użytkownika w 3-4 akapitach.`;
           }
         });
       } catch (error) {
-        this.logger.warn('Nie można zapisać learning w MCP:', error);
+        this.logger.warn('Nie można zapisać learning w MCP:', { error: error instanceof Error ? error.message : String(error) });
       }
     }
   }
@@ -594,7 +607,7 @@ Stwórz profesjonalny, actionable response dla użytkownika w 3-4 akapitach.`;
   private parseComplexityAnalysis(aiResponse: string): ComplexityAnalysis {
     try {
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) throw new Error('No JSON found');
+      if (!jsonMatch || !jsonMatch[1]) throw new Error('No JSON found');
       return JSON.parse(jsonMatch[1]);
     } catch {
       return this.createFallbackComplexityAnalysis('');
@@ -621,7 +634,7 @@ Stwórz profesjonalny, actionable response dla użytkownika w 3-4 akapitach.`;
   private parseResponseReflection(aiResponse: string): ResponseReflection {
     try {
       const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-      if (!jsonMatch) throw new Error('No JSON found');
+      if (!jsonMatch || !jsonMatch[1]) throw new Error('No JSON found');
       return JSON.parse(jsonMatch[1]);
     } catch {
       return this.createFallbackReflection(null);

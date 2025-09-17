@@ -22,6 +22,28 @@ export { PlaywrightMCPServer } from './browsers/playwright';
 export { ContextPortalMCPServer } from './memory/context-portal';
 export { MemoryKeeperMCPServer } from './memory/memory-keeper';
 
+// Domyślne serwery MCP
+export const defaultMCPServers = [
+  {
+    id: 'playwright',
+    name: 'Playwright Browser Automation',
+    description: 'Automatyzacja przeglądarki za pomocą Playwright',
+    enabled: false
+  },
+  {
+    id: 'context-portal', 
+    name: 'Context Portal Memory',
+    description: 'Zarządzanie pamięcią kontekstową',
+    enabled: false
+  },
+  {
+    id: 'memory-keeper',
+    name: 'Memory Keeper',
+    description: 'Trwała pamięć semantyczna',
+    enabled: false
+  }
+];
+
 // Eksport managerów serwerów
 export {
   PlaywrightServerManager,
@@ -31,6 +53,7 @@ export {
 
 // Utility functions
 import { MCPConfig } from './types';
+import { MCPManager } from './manager';
 
 /**
  * Tworzy domyślną konfigurację MCP
@@ -302,5 +325,6 @@ export default {
   createDefaultMCPConfig,
   validateMCPConfig,
   createMCPManager,
-  MCPUtils
+  MCPUtils,
+  defaultMCPServers
 };

@@ -11,6 +11,10 @@
 export { PollinationsAIClient, pollinationsAI } from './pollinations-client';
 export { CodingAgent, codingAgent } from './coding-agent';
 
+// Re-export for default
+import { PollinationsAIClient, pollinationsAI } from './pollinations-client';
+import { CodingAgent, codingAgent } from './coding-agent';
+
 // Eksport typów
 export type {
   ChatMessage,
@@ -56,10 +60,14 @@ export const AIUtils = {
     let match;
     
     while ((match = codeBlockRegex.exec(text)) !== null) {
-      blocks.push({
-        language: match[1] || undefined,
+      if (!match[2]) continue; // Skip if no code content
+      const block: { language?: string; code: string } = {
         code: match[2].trim()
-      });
+      };
+      if (match[1]) {
+        block.language = match[1];
+      }
+      blocks.push(block);
     }
     
     return blocks;

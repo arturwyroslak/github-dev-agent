@@ -39,6 +39,7 @@ export interface ContextPortalMCPConfig extends BaseMCPConfig {
 export interface MemoryMCPConfig extends BaseMCPConfig {
   serverCommand?: string;
   serverArgs?: string[];
+  workspaceId?: string;
   memoryProvider?: 'mem0' | 'txtai' | 'chroma' | 'custom';
   persistentStorage?: boolean;
   embeddingModel?: string;
@@ -151,7 +152,7 @@ export interface MCPServerStatus {
   serverId: string;
   isRunning: boolean;
   hasProcess: boolean;
-  pid?: number;
+  pid: number;
   uptime: number;
   lastError?: string;
   capabilities?: {
@@ -172,7 +173,7 @@ export interface MCPServerManager {
   isHealthy(): Promise<boolean>;
   callTool(toolCall: MCPToolCall): Promise<MCPToolResult>;
   getResource(uri: string): Promise<MCPResourceContent>;
-  getPrompt(name: string, arguments?: Record<string, any>): Promise<MCPPromptResult>;
+  getPrompt(name: string, args?: Record<string, any>): Promise<MCPPromptResult>;
 }
 
 // Typy dla eventów MCP
