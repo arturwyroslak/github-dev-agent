@@ -181,7 +181,7 @@ router.post('/execute-goal', autonomousLimiter, [
   body('async')
     .optional()
     .isBoolean()
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -261,7 +261,7 @@ router.post('/execute-goal', autonomousLimiter, [
  */
 router.get('/execution/:executionId/status', monitoringLimiter, [
   param('executionId').isString().isLength({ min: 1, max: 100 })
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -273,6 +273,13 @@ router.get('/execution/:executionId/status', monitoringLimiter, [
     }
 
     const { executionId } = req.params;
+    
+    if (!executionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing execution ID'
+      });
+    }
     
     const status = taskPlanner.getExecutionStatus(executionId);
     
@@ -364,7 +371,7 @@ router.post('/recover', autonomousLimiter, [
   body('recoveryStrategy')
     .optional()
     .isIn(['retry', 'alternative', 'decompose', 'research', 'abort'])
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -427,7 +434,7 @@ router.post('/plan', [
   body('goal').isString().isLength({ min: 10, max: 1000 }),
   body('context').optional().isObject(),
   body('constraints').optional().isObject()
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -444,15 +451,22 @@ router.post('/plan', [
     const dryRunPlanner = new (taskPlanner.constructor as any)();
     const plan = await dryRunPlanner.createTaskPlan(goal, context, constraints);
     
+    if (!plan) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create plan'
+      });
+    }
+    
     res.json({
       success: true,
       data: {
         plan,
         estimation: {
-          totalTasks: plan.tasks.length,
-          estimatedDuration: plan.estimatedDuration,
-          complexity: this.calculatePlanComplexity(plan),
-          riskLevel: this.assessPlanRisk(plan)
+          totalTasks: plan.tasks?.length || 0,
+          estimatedDuration: plan.estimatedDuration || 0,
+          complexity: calculatePlanComplexity(plan),
+          riskLevel: assessPlanRisk(plan)
         }
       }
     });
@@ -496,7 +510,7 @@ router.get('/history', [
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('successOnly').optional().isBoolean(),
   query('goalType').optional().isString().isLength({ max: 50 })
-], (req: Request, res: Response) => {
+], (req: Request, res: Response): Response | void => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -597,7 +611,7 @@ router.get('/patterns', (req: Request, res: Response) => {
  */
 router.get('/debug/:executionId', [
   param('executionId').isString().isLength({ min: 1, max: 100 })
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -609,6 +623,13 @@ router.get('/debug/:executionId', [
     }
 
     const { executionId } = req.params;
+    
+    if (!executionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing execution ID'
+      });
+    }
     
     // Pobierz debug info (implementacja zależy od internal storage)
     const debugInfo = {
@@ -661,7 +682,7 @@ router.post('/interrupt/:executionId', [
   param('executionId').isString(),
   body('reason').optional().isString().isLength({ max: 500 }),
   body('saveProgress').optional().isBoolean()
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -673,6 +694,14 @@ router.post('/interrupt/:executionId', [
     }
 
     const { executionId } = req.params;
+    
+    if (!executionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing execution ID'
+      });
+    }
+    
     const { reason = 'User requested interruption', saveProgress = true } = req.body;
     
     logger.info(`Interruption request for execution: ${executionId}`);
@@ -768,7 +797,7 @@ router.get('/learning/export', (req: Request, res: Response) => {
 router.post('/test-goal', [
   body('complexity').isIn(['simple', 'medium', 'complex']),
   body('domain').optional().isString()
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { complexity, domain = 'web-development' } = req.body;
     
@@ -791,6 +820,12 @@ router.post('/test-goal', [
     };
     
     const goals = testGoals[complexity as keyof typeof testGoals];
+    if (!goals || goals.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No test goals available for complexity level'
+      });
+    }
     const randomGoal = goals[Math.floor(Math.random() * goals.length)];
     
     // Uruchom test z niskim limitem czasu

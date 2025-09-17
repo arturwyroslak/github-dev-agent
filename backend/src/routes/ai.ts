@@ -119,7 +119,7 @@ const codeAnalysisValidation = [
  *                     metadata:
  *                       type: object
  */
-router.post('/chat', aiLimiter, chatValidation, async (req: Request, res: Response) => {
+router.post('/chat', aiLimiter, chatValidation, async (req: Request, res: Response): Promise<Response | void> => {
   try {
     // Walidacja
     const errors = validationResult(req);
@@ -194,7 +194,7 @@ router.post('/chat', aiLimiter, chatValidation, async (req: Request, res: Respon
  *       200:
  *         description: Wynik analizy
  */
-router.post('/analyze-code', aiLimiter, codeAnalysisValidation, async (req: Request, res: Response) => {
+router.post('/analyze-code', aiLimiter, codeAnalysisValidation, async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -266,7 +266,7 @@ router.post('/generate-tests', aiLimiter, [
   body('code').isString().isLength({ min: 1, max: 50000 }),
   body('testType').isIn(['unit', 'integration', 'e2e', 'performance']),
   body('context').optional().isObject()
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -323,7 +323,7 @@ router.post('/generate-tests', aiLimiter, [
  *       200:
  *         description: Sesja usunięta
  */
-router.delete('/sessions/:sessionId', (req: Request, res: Response) => {
+router.delete('/sessions/:sessionId', (req: Request, res: Response): Response | void => {
   try {
     const { sessionId } = req.params;
     
@@ -380,7 +380,7 @@ router.delete('/sessions/:sessionId', (req: Request, res: Response) => {
  *                     uptime:
  *                       type: number
  */
-router.get('/stats', (req: Request, res: Response) => {
+router.get('/stats', (req: Request, res: Response): Response | void => {
   try {
     const stats = codingAgent.getStats();
     
@@ -426,7 +426,7 @@ router.get('/stats', (req: Request, res: Response) => {
  *                     mcp:
  *                       type: boolean
  */
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const agentHealthy = await codingAgent.healthCheck();
     const pollinationsHealthy = await pollinationsAI.healthCheck();
@@ -466,7 +466,7 @@ router.get('/health', async (req: Request, res: Response) => {
  *       200:
  *         description: Lista modeli
  */
-router.get('/models', async (req: Request, res: Response) => {
+router.get('/models', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const models = await pollinationsAI.getAvailableModels();
     
@@ -540,7 +540,7 @@ router.post('/raw-chat', aiLimiter, [
   body('options')
     .optional()
     .isObject()
-], async (req: Request, res: Response) => {
+], async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -579,7 +579,7 @@ router.post('/raw-chat', aiLimiter, [
 /**
  * Middleware do obsługi błędów specyficznych dla AI
  */
-router.use((error: Error, req: Request, res: Response, next: any) => {
+router.use((error: Error, req: Request, res: Response, next: any): Response | void => {
   logger.error('AI Router Error:', error);
   
   // Specjalna obsługa błędów API
