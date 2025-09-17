@@ -184,27 +184,28 @@ export class TaskPlanner extends EventEmitter {
     this.logger.info(`[${executionId}] Wykonywanie zadania: ${task.id} - ${task.description}`);
     
     try {
-      let result: any;\n      
+      let result: any;
+    
       switch (task.type) {
         case 'code_generation':
           result = await this.executeCodeGeneration(task, context);
           break;
-          \n        case 'code_analysis':
+        case 'code_analysis':
           result = await this.executeCodeAnalysis(task, context);
           break;
-          \n        case 'testing':
+        case 'testing':
           result = await this.executeTesting(task, context);
           break;
-          \n        case 'mcp_operation':
+        case 'mcp_operation':
           result = await this.executeMCPOperation(task, context);
           break;
-          \n        case 'research':
+        case 'research':
           result = await this.executeResearch(task, context);
           break;
-          \n        case 'validation':
+        case 'validation':
           result = await this.executeValidation(task, context);
           break;
-          \n        default:
+        default:
           result = await this.executeGenericTask(task, context);
       }
       
