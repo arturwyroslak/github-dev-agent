@@ -1,0 +1,93 @@
+{
+  "name": "github-dev-agent",
+  "version": "1.0.0",
+  "description": "Advanced GitHub Development Agent with Autonomous Task Execution and MCP Integration",
+  "main": "backend/dist/index.js",
+  "scripts": {
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "setup": "npm install && npm run setup:backend && npm run setup:frontend",
+    "setup:backend": "cd backend && npm install",
+    "setup:frontend": "cd frontend && npm install",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd backend && npm run clean",
+    "clean:frontend": "cd frontend && npm run clean",
+    "docker:build": "docker build -t github-dev-agent .",
+    "docker:run": "docker run -p 8080:8080 -p 3000:3000 github-dev-agent",
+    "mcp:install": "npm run mcp:install:servers",
+    "mcp:install:servers": "npm install -g @mcp/memory-keeper @mcp/context-portal playwright-mcp-server"
+  },
+  "keywords": [
+    "github",
+    "ai",
+    "automation",
+    "development",
+    "agent",
+    "autonomous",
+    "mcp",
+    "typescript",
+    "react",
+    "coding-assistant"
+  ],
+  "author": "Artur Wyroślak",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arturwyroslak/github-dev-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/arturwyroslak/github-dev-agent/issues"
+  },
+  "homepage": "https://github.com/arturwyroslak/github-dev-agent#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "volta": {
+    "node": "18.18.0",
+    "npm": "9.8.1"
+  }
+}
