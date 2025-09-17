@@ -17,14 +17,14 @@ export class MemoryKeeperMCPServer extends EventEmitter {
   constructor(config: MemoryMCPConfig, projectPath?: string) {
     super();
     this.config = {
-      enabled: true,
       serverCommand: 'npx',
       serverArgs: ['@mcp/memory-keeper'],
       timeout: 30000,
       logLevel: 'INFO',
       memoryProvider: 'mem0',
       persistentStorage: true,
-      ...config
+      ...config,
+      enabled: true
     };
     this.projectPath = projectPath || process.cwd();
     this.logger = new Logger('MemoryKeeperMCP');
@@ -41,7 +41,7 @@ export class MemoryKeeperMCPServer extends EventEmitter {
     this.logger.info('Uruchamianie Memory Keeper MCP server...');
 
     try {
-      const args = [...this.config.serverArgs];
+      const args = [...(this.config.serverArgs || [])];
       
       // Dodaj ścieżkę projektu
       if (this.projectPath) {
@@ -68,7 +68,7 @@ export class MemoryKeeperMCPServer extends EventEmitter {
         args.push('--log-level', this.config.logLevel);
       }
 
-      this.process = spawn(this.config.serverCommand, args, {
+      this.process = spawn(this.config.serverCommand!, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
@@ -259,13 +259,14 @@ export class MemoryKeeperMCPServer extends EventEmitter {
    * Pobiera status serwera
    */
   getStatus(): ServerStatus {
+    const pid = this.process?.pid;
     return {
       isRunning: this.isRunning,
       hasProcess: this.process !== null,
-      pid: this.process?.pid,
+      pid: pid !== undefined ? pid : 0,
       uptime: this.isRunning ? Date.now() : 0,
       projectPath: this.projectPath,
-      memoryProvider: this.config.memoryProvider
+      memoryProvider: this.config.memoryProvider || 'mem0'
     };
   }
 
@@ -453,8 +454,8 @@ export interface CleanupOptions {
 export interface ServerStatus {
   isRunning: boolean;
   hasProcess: boolean;
-  pid?: number;
+  pid: number;
   uptime: number;
   projectPath: string;
-  memoryProvider?: string;
+  memoryProvider: string;
 }

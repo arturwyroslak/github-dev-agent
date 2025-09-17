@@ -16,11 +16,11 @@ export class PlaywrightMCPServer extends EventEmitter {
   constructor(config: PlaywrightMCPConfig) {
     super();
     this.config = {
-      enabled: true,
       serverPath: 'npx',
       args: ['playwright-mcp-server'],
       timeout: 30000,
-      ...config
+      ...config,
+      enabled: true
     };
     this.logger = new Logger('PlaywrightMCP');
   }
@@ -36,7 +36,7 @@ export class PlaywrightMCPServer extends EventEmitter {
     this.logger.info('Uruchamianie Playwright MCP server...');
 
     try {
-      this.process = spawn(this.config.serverPath, this.config.args, {
+      this.process = spawn(this.config.serverPath!, this.config.args!, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: {
           ...process.env,
@@ -230,10 +230,11 @@ export class PlaywrightMCPServer extends EventEmitter {
    * Pobiera status serwera
    */
   getStatus(): ServerStatus {
+    const pid = this.process?.pid;
     return {
       isRunning: this.isRunning,
       hasProcess: this.process !== null,
-      pid: this.process?.pid,
+      pid: pid !== undefined ? pid : 0,
       uptime: this.isRunning ? Date.now() : 0
     };
   }
@@ -400,6 +401,6 @@ export interface WaitOptions {
 export interface ServerStatus {
   isRunning: boolean;
   hasProcess: boolean;
-  pid?: number;
+  pid: number;
   uptime: number;
 }

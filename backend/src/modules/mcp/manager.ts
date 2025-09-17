@@ -131,8 +131,22 @@ export class MCPManager extends EventEmitter {
   }
 
   /**
-   * Uruchamia konkretny serwer
+   * Zatrzymuje wszystkie serwery i czyści zasoby
    */
+  async shutdown(): Promise<void> {
+    this.logger.info('Rozpoczynanie shutdown MCP Manager...');
+    
+    try {
+      await this.stopAll();
+      this.servers.clear();
+      this.isInitialized = false;
+      this.emit('manager:shutdown');
+      this.logger.info('MCP Manager został zamknięty');
+    } catch (error) {
+      this.logger.error('Błąd podczas shutdown MCP Manager:', error);
+      throw error;
+    }
+  }
   async startServer(serverId: string): Promise<void> {
     const server = this.servers.get(serverId);
     if (!server) {
@@ -193,13 +207,13 @@ export class MCPManager extends EventEmitter {
   /**
    * Pobiera prompt z konkretnego serwera
    */
-  async getPrompt(serverId: string, name: string, arguments?: Record<string, any>): Promise<MCPPromptResult> {
+  async getPrompt(serverId: string, name: string, args?: Record<string, any>): Promise<MCPPromptResult> {
     const server = this.servers.get(serverId);
     if (!server) {
       throw new Error(`Serwer ${serverId} nie istnieje`);
     }
 
-    return server.getPrompt(name, arguments);
+    return server.getPrompt(name, args);
   }
 
   /**
@@ -266,7 +280,7 @@ export class MCPManager extends EventEmitter {
   private setupServerEventHandlers(serverId: string, server: MCPServerManager): void {
     // Przekazuj eventy serwera na poziom managera
     ['started', 'stopped', 'error', 'stdout', 'stderr'].forEach(event => {
-      server.on(event, (...args: any[]) => {
+      (server as any).on(event, (...args: any[]) => {
         this.emit(`server:${event}`, serverId, ...args);
       });
     });
@@ -338,7 +352,7 @@ abstract class BaseMCPServerManager extends EventEmitter implements MCPServerMan
 
   abstract callTool(toolCall: MCPToolCall): Promise<MCPToolResult>;
   abstract getResource(uri: string): Promise<MCPResourceContent>;
-  abstract getPrompt(name: string, arguments?: Record<string, any>): Promise<MCPPromptResult>;
+  abstract getPrompt(name: string, args?: Record<string, any>): Promise<MCPPromptResult>;
 }
 
 /**
@@ -374,7 +388,7 @@ class PlaywrightServerManager extends BaseMCPServerManager {
     throw new Error('Resources nie są obsługiwane przez Playwright MCP');
   }
 
-  async getPrompt(name: string, arguments?: Record<string, any>): Promise<MCPPromptResult> {
+  async getPrompt(name: string, args?: Record<string, any>): Promise<MCPPromptResult> {
     throw new Error('Prompts nie są obsługiwane przez Playwright MCP');
   }
 
@@ -450,7 +464,7 @@ class ContextPortalServerManager extends BaseMCPServerManager {
     throw new Error('Resources nie są obsługiwane przez Context Portal MCP');
   }
 
-  async getPrompt(name: string, arguments?: Record<string, any>): Promise<MCPPromptResult> {
+  async getPrompt(name: string, args?: Record<string, any>): Promise<MCPPromptResult> {
     throw new Error('Prompts nie są obsługiwane przez Context Portal MCP');
   }
 }
@@ -517,7 +531,7 @@ class MemoryKeeperServerManager extends BaseMCPServerManager {
     throw new Error('Resources nie są obsługiwane przez Memory Keeper MCP');
   }
 
-  async getPrompt(name: string, arguments?: Record<string, any>): Promise<MCPPromptResult> {
+  async getPrompt(name: string, args?: Record<string, any>): Promise<MCPPromptResult> {
     throw new Error('Prompts nie są obsługiwane przez Memory Keeper MCP');
   }
 }
