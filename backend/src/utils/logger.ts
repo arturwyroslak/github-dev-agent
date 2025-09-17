@@ -1,334 +1,421 @@
 import winston from 'winston';
 import path from 'path';
+import fs from 'fs';
 
 /**
- * Advanced Logger with Winston
- * Provides structured logging with different levels and outputs
+ * Production-ready logging utility with structured logging
+ * Supports multiple transports, log rotation, and contextual logging
+ */
+
+// Ensure logs directory exists
+const logsDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+// Custom log levels
+const logLevels = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  http: 3,
+  debug: 4,
+  verbose: 5,
+  silly: 6
+};
+
+// Custom colors for console output
+const logColors = {
+  error: 'red',
+  warn: 'yellow',
+  info: 'green',
+  http: 'magenta',
+  debug: 'white',
+  verbose: 'cyan',
+  silly: 'grey'
+};
+
+winston.addColors(logColors);
+
+// Custom format for structured logging
+const logFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
+  winston.format.errors({ stack: true }),
+  winston.format.json(),
+  winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp', 'service'] })
+);
+
+// Console format for development
+const consoleFormat = winston.format.combine(
+  winston.format.colorize({ all: true }),
+  winston.format.timestamp({ format: 'HH:mm:ss.SSS' }),
+  winston.format.printf((info) => {
+    const { timestamp, level, message, service, ...meta } = info;
+    const metaStr = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+    return `${timestamp} [${service || 'App'}] ${level}: ${message} ${metaStr}`;
+  })
+);
+
+// File transport configuration
+const fileTransportConfig = {
+  filename: path.join(logsDir, 'application.log'),
+  handleExceptions: true,
+  handleRejections: true,
+  maxsize: 10 * 1024 * 1024, // 10MB
+  maxFiles: 10,
+  tailable: true,
+  format: logFormat
+};
+
+// Error file transport
+const errorFileTransportConfig = {
+  ...fileTransportConfig,
+  filename: path.join(logsDir, 'error.log'),
+  level: 'error'
+};
+
+// Create winston logger instance
+const winstonLogger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  levels: logLevels,
+  format: logFormat,
+  defaultMeta: {
+    service: 'github-dev-agent',
+    environment: process.env.NODE_ENV || 'development',
+    version: process.env.npm_package_version || '1.0.0'
+  },
+  transports: [
+    // File transports
+    new winston.transports.File(fileTransportConfig),
+    new winston.transports.File(errorFileTransportConfig),
+    
+    // Console transport for development
+    ...(process.env.NODE_ENV !== 'production' ? [
+      new winston.transports.Console({
+        format: consoleFormat,
+        handleExceptions: true,
+        handleRejections: true
+      })
+    ] : [])
+  ],
+  exitOnError: false
+});
+
+// HTTP request logging stream
+const httpLogStream = {
+  write: (message: string) => {
+    winstonLogger.http(message.trim());
+  }
+};
+
+/**
+ * Enhanced Logger class with contextual logging and performance tracking
  */
 export class Logger {
-  private logger: winston.Logger;
   private context: string;
+  private metadata: Record<string, any>;
 
-  constructor(context: string = 'Application') {
+  constructor(context: string = 'App', metadata: Record<string, any> = {}) {
     this.context = context;
-    this.logger = this.createLogger();
+    this.metadata = metadata;
   }
 
   /**
-   * Creates configured Winston logger instance
+   * Create a child logger with additional context
    */
-  private createLogger(): winston.Logger {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info');
-
-    // Custom format for development
-    const devFormat = winston.format.combine(
-      winston.format.timestamp({ format: 'HH:mm:ss' }),
-      winston.format.colorize(),
-      winston.format.printf(({ level, message, timestamp, context, ...meta }) => {
-        const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-        return `${timestamp} [${context || this.context}] ${level}: ${message}${metaStr}`;
-      })
-    );
-
-    // Structured format for production
-    const prodFormat = winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.errors({ stack: true }),
-      winston.format.json()
-    );
-
-    const transports: winston.transport[] = [];
-
-    // Console transport
-    transports.push(
-      new winston.transports.Console({
-        format: isDevelopment ? devFormat : prodFormat,
-        level: logLevel
-      })
-    );
-
-    // File transports for production
-    if (!isDevelopment) {
-      const logsDir = process.env.LOGS_DIR || 'logs';
-      
-      // Combined logs
-      transports.push(
-        new winston.transports.File({
-          filename: path.join(logsDir, 'combined.log'),
-          format: prodFormat,
-          maxsize: 5242880, // 5MB
-          maxFiles: 5
-        })
-      );
-
-      // Error logs
-      transports.push(
-        new winston.transports.File({
-          filename: path.join(logsDir, 'error.log'),
-          level: 'error',
-          format: prodFormat,
-          maxsize: 5242880, // 5MB
-          maxFiles: 5
-        })
-      );
-    }
-
-    return winston.createLogger({
-      level: logLevel,
-      transports,
-      // Don't exit on handled exceptions
-      exitOnError: false,
-      // Add default metadata
-      defaultMeta: {
-        service: 'github-dev-agent',
-        context: this.context
-      }
-    });
+  child(context: string, metadata: Record<string, any> = {}): Logger {
+    return new Logger(`${this.context}:${context}`, { ...this.metadata, ...metadata });
   }
 
   /**
-   * Log debug message
+   * Add persistent metadata to all log entries
    */
-  debug(message: string, meta?: any): void {
-    this.logger.debug(message, { context: this.context, ...meta });
+  setMetadata(metadata: Record<string, any>): void {
+    this.metadata = { ...this.metadata, ...metadata };
   }
 
   /**
-   * Log info message
+   * Clear all metadata
    */
-  info(message: string, meta?: any): void {
-    this.logger.info(message, { context: this.context, ...meta });
-  }
-
-  /**
-   * Log warning message
-   */
-  warn(message: string, meta?: any): void {
-    this.logger.warn(message, { context: this.context, ...meta });
-  }
-
-  /**
-   * Log error message
-   */
-  error(message: string, error?: Error | any, meta?: any): void {
-    const errorMeta = error instanceof Error ? {
-      error: {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      }
-    } : { error };
-
-    this.logger.error(message, { 
-      context: this.context, 
-      ...errorMeta, 
-      ...meta 
-    });
-  }
-
-  /**
-   * Log verbose message
-   */
-  verbose(message: string, meta?: any): void {
-    this.logger.verbose(message, { context: this.context, ...meta });
-  }
-
-  /**
-   * Create child logger with extended context
-   */
-  child(childContext: string): Logger {
-    return new Logger(`${this.context}:${childContext}`);
-  }
-
-  /**
-   * Start timing for performance measurement
-   */
-  startTimer(): winston.Profiler {
-    return this.logger.startTimer();
+  clearMetadata(): void {
+    this.metadata = {};
   }
 
   /**
    * Log with custom level
    */
-  log(level: string, message: string, meta?: any): void {
-    this.logger.log(level, message, { context: this.context, ...meta });
-  }
-
-  /**
-   * Get the underlying Winston logger
-   */
-  getWinstonLogger(): winston.Logger {
-    return this.logger;
-  }
-}
-
-/**
- * Utility functions for logging
- */
-export class LoggerUtils {
-  /**
-   * Create request logger middleware for Express
-   */
-  static createRequestLogger(logger: Logger) {
-    return (req: any, res: any, next: any) => {
-      const start = Date.now();
-      const requestId = req.headers['x-request-id'] || Math.random().toString(36).substr(2, 9);
-      
-      // Add request ID to request for downstream usage
-      req.requestId = requestId;
-      
-      logger.info('Request started', {
-        requestId,
-        method: req.method,
-        url: req.url,
-        userAgent: req.get('User-Agent'),
-        ip: req.ip
-      });
-
-      res.on('finish', () => {
-        const duration = Date.now() - start;
-        const level = res.statusCode >= 400 ? 'warn' : 'info';
-        
-        logger.log(level, 'Request completed', {
-          requestId,
-          method: req.method,
-          url: req.url,
-          statusCode: res.statusCode,
-          duration,
-          contentLength: res.get('content-length')
-        });
-      });
-
-      next();
+  private log(level: string, message: string, meta?: Record<string, any>): void {
+    const logMeta = {
+      ...this.metadata,
+      ...meta,
+      service: this.context
     };
+
+    winstonLogger.log(level, message, logMeta);
   }
 
   /**
-   * Create async error logger
+   * Error level logging
    */
-  static createAsyncErrorLogger(logger: Logger) {
-    return (error: Error, context?: string) => {
-      logger.error(
-        `Async error${context ? ` in ${context}` : ''}`,
-        error,
-        { asyncError: true }
-      );
-    };
-  }
-
-  /**
-   * Format error for logging
-   */
-  static formatError(error: unknown): { message: string; stack?: string; name?: string } {
+  error(message: string, error?: Error | unknown, meta?: Record<string, any>): void {
+    const errorMeta = { ...meta };
+    
     if (error instanceof Error) {
-      return {
+      errorMeta.error = {
+        name: error.name,
         message: error.message,
         stack: error.stack,
-        name: error.name
+        ...(error.cause && { cause: error.cause })
       };
+    } else if (error) {
+      errorMeta.error = error;
     }
-    
-    return {
-      message: String(error)
-    };
+
+    this.log('error', message, errorMeta);
   }
 
   /**
-   * Sanitize sensitive data from logs
+   * Warning level logging
    */
-  static sanitizeLogData(data: any): any {
-    if (typeof data !== 'object' || data === null) {
-      return data;
+  warn(message: string, meta?: Record<string, any>): void {
+    this.log('warn', message, meta);
+  }
+
+  /**
+   * Info level logging
+   */
+  info(message: string, meta?: Record<string, any>): void {
+    this.log('info', message, meta);
+  }
+
+  /**
+   * HTTP level logging
+   */
+  http(message: string, meta?: Record<string, any>): void {
+    this.log('http', message, meta);
+  }
+
+  /**
+   * Debug level logging
+   */
+  debug(message: string, meta?: Record<string, any>): void {
+    this.log('debug', message, meta);
+  }
+
+  /**
+   * Verbose level logging
+   */
+  verbose(message: string, meta?: Record<string, any>): void {
+    this.log('verbose', message, meta);
+  }
+
+  /**
+   * Silly level logging
+   */
+  silly(message: string, meta?: Record<string, any>): void {
+    this.log('silly', message, meta);
+  }
+
+  /**
+   * Performance timing utilities
+   */
+  time(label: string): void {
+    console.time(`${this.context}:${label}`);
+  }
+
+  timeEnd(label: string, message?: string): void {
+    console.timeEnd(`${this.context}:${label}`);
+    if (message) {
+      this.debug(`${message} - ${label} completed`);
     }
+  }
 
-    const sensitiveKeys = [
-      'password', 'token', 'secret', 'key', 'authorization',
-      'cookie', 'auth', 'credentials', 'api_key', 'apikey'
-    ];
-
-    const sanitized = { ...data };
+  /**
+   * Async operation wrapper with automatic timing and error handling
+   */
+  async profile<T>(
+    operation: string,
+    fn: () => Promise<T>,
+    meta?: Record<string, any>
+  ): Promise<T> {
+    const startTime = Date.now();
+    const operationId = `${operation}-${Date.now()}`;
     
-    for (const key in sanitized) {
-      const lowerKey = key.toLowerCase();
+    this.debug(`Starting operation: ${operation}`, { operationId, ...meta });
+    
+    try {
+      const result = await fn();
+      const duration = Date.now() - startTime;
       
-      if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
-        sanitized[key] = '[REDACTED]';
-      } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
-        sanitized[key] = LoggerUtils.sanitizeLogData(sanitized[key]);
-      }
+      this.info(`Operation completed: ${operation}`, {
+        operationId,
+        duration,
+        success: true,
+        ...meta
+      });
+      
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      this.error(`Operation failed: ${operation}`, error, {
+        operationId,
+        duration,
+        success: false,
+        ...meta
+      });
+      
+      throw error;
     }
+  }
 
-    return sanitized;
+  /**
+   * Log GitHub API operations
+   */
+  githubApi(
+    method: string,
+    endpoint: string,
+    statusCode: number,
+    duration: number,
+    rateLimitRemaining?: number
+  ): void {
+    this.http(`GitHub API: ${method} ${endpoint}`, {
+      method,
+      endpoint,
+      statusCode,
+      duration,
+      rateLimitRemaining,
+      type: 'github-api'
+    });
+  }
+
+  /**
+   * Log MCP operations
+   */
+  mcpOperation(
+    operation: string,
+    server: string,
+    success: boolean,
+    duration: number,
+    meta?: Record<string, any>
+  ): void {
+    const level = success ? 'info' : 'warn';
+    this.log(level, `MCP Operation: ${operation}`, {
+      operation,
+      server,
+      success,
+      duration,
+      type: 'mcp-operation',
+      ...meta
+    });
+  }
+
+  /**
+   * Log user actions for audit trail
+   */
+  userAction(
+    userId: string,
+    action: string,
+    resource?: string,
+    meta?: Record<string, any>
+  ): void {
+    this.info(`User Action: ${action}`, {
+      userId,
+      action,
+      resource,
+      type: 'user-action',
+      timestamp: new Date().toISOString(),
+      ...meta
+    });
+  }
+
+  /**
+   * Log security events
+   */
+  security(
+    event: string,
+    level: 'info' | 'warn' | 'error' = 'warn',
+    meta?: Record<string, any>
+  ): void {
+    this.log(level, `Security Event: ${event}`, {
+      event,
+      type: 'security',
+      timestamp: new Date().toISOString(),
+      ...meta
+    });
+  }
+
+  /**
+   * Check if logging level is enabled
+   */
+  isLevelEnabled(level: string): boolean {
+    return winstonLogger.isLevelEnabled(level);
   }
 }
 
-/**
- * Performance logging utility
- */
+// Create default logger instance
+export const logger = new Logger('App');
+
+// Export HTTP log stream for middleware
+export { httpLogStream };
+
+// Export winston logger for advanced use cases
+export { winstonLogger };
+
+// Performance monitoring utilities
 export class PerformanceLogger {
-  private logger: Logger;
-  private timers: Map<string, number> = new Map();
+  private static instances = new Map<string, number>();
 
-  constructor(context: string = 'Performance') {
-    this.logger = new Logger(context);
+  static start(operation: string): void {
+    this.instances.set(operation, Date.now());
   }
 
-  /**
-   * Start performance timer
-   */
-  start(operation: string): void {
-    this.timers.set(operation, Date.now());
-    this.logger.debug(`Started: ${operation}`);
-  }
-
-  /**
-   * End performance timer and log result
-   */
-  end(operation: string, meta?: any): number {
-    const startTime = this.timers.get(operation);
+  static end(operation: string, logger: Logger = new Logger('Performance')): number {
+    const startTime = this.instances.get(operation);
     if (!startTime) {
-      this.logger.warn(`No start time found for operation: ${operation}`);
+      logger.warn(`Performance measurement not found for operation: ${operation}`);
       return 0;
     }
 
     const duration = Date.now() - startTime;
-    this.timers.delete(operation);
-
-    this.logger.info(`Completed: ${operation}`, {
+    this.instances.delete(operation);
+    
+    logger.info(`Performance: ${operation} completed in ${duration}ms`, {
+      operation,
       duration,
-      ...meta
+      type: 'performance'
     });
 
     return duration;
   }
 
-  /**
-   * Measure async function execution time
-   */
-  async measure<T>(
-    operation: string, 
-    fn: () => Promise<T>, 
-    meta?: any
+  static measure<T>(operation: string, fn: () => T, logger: Logger = new Logger('Performance')): T {
+    this.start(operation);
+    try {
+      const result = fn();
+      this.end(operation, logger);
+      return result;
+    } catch (error) {
+      this.end(operation, logger);
+      throw error;
+    }
+  }
+
+  static async measureAsync<T>(
+    operation: string,
+    fn: () => Promise<T>,
+    logger: Logger = new Logger('Performance')
   ): Promise<T> {
     this.start(operation);
     try {
       const result = await fn();
-      this.end(operation, { ...meta, success: true });
+      this.end(operation, logger);
       return result;
     } catch (error) {
-      this.end(operation, { 
-        ...meta, 
-        success: false, 
-        error: LoggerUtils.formatError(error) 
-      });
+      this.end(operation, logger);
       throw error;
     }
   }
 }
 
-// Default logger instance
-export const defaultLogger = new Logger('App');
-
-// Export logger for backward compatibility
 export default Logger;
