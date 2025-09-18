@@ -33,6 +33,13 @@ services:
     restart: unless-stopped
     networks:
       - github-dev-agent
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -57,6 +64,10 @@ services:
     restart: unless-stopped
     networks:
       - github-dev-agent
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d github_dev_agent"]
       interval: 10s
@@ -78,6 +89,10 @@ services:
     restart: unless-stopped
     networks:
       - github-dev-agent
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "github_redis_pass", "ping"]
       interval: 10s
@@ -169,6 +184,3 @@ volumes:
 networks:
   github-dev-agent:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

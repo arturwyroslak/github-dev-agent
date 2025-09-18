@@ -52,15 +52,20 @@ LABEL maintainer="Artur Wyroślak <artur@example.com>"
 LABEL description="GitHub Development Agent with AI and MCP Integration"
 LABEL version="1.0.0"
 
+# Create non-root user with proper permissions
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
+# Install runtime dependencies and configure system limits
 RUN apk add --no-cache \
     dumb-init \
     tini \
     curl \
     ca-certificates \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    && echo 'fs.file-max = 2097152' >> /etc/sysctl.conf \
+    && echo 'nextjs soft nofile 65536' >> /etc/security/limits.conf \
+    && echo 'nextjs hard nofile 65536' >> /etc/security/limits.conf
 
 WORKDIR /app
 
@@ -75,16 +80,23 @@ COPY --from=frontend-builder --chown=nextjs:nodejs /app/frontend/dist ./frontend
 # Root package.json
 COPY --chown=nextjs:nodejs package.json ./
 
+# Create directories with proper permissions and optimize for file handling
 RUN mkdir -p /app/logs /app/tmp && \
-    chown -R nextjs:nodejs /app
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
 
+# Environment configuration
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
+ENV UV_THREADPOOL_SIZE=128
 
 EXPOSE 8080
 
 USER nextjs
+
+# Optimize Node.js for file handling
+ENV NODE_OPTIONS="--max-old-space-size=2048 --max-http-header-size=8192"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
