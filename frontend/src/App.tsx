@@ -1,21 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { ErrorBoundary } from 'react-error-boundary';
 
 // Import main components
-import { AgentCommandCenter } from './components/agent/AgentCommandCenter';
-import { ThinkingProcess } from './components/agent/ThinkingProcess';
-import { EnhancedChatInterface } from './components/chat/EnhancedChatInterface';
-import { ExecutionPipeline } from './components/agent/ExecutionPipeline';
-import { SystemHealthMonitor } from './components/agent/SystemHealthMonitor';
-import { LearningInsights } from './components/agent/LearningInsights';
+import { SimpleChatInterface } from './components/chat/SimpleChatInterface';
 
-// Import hooks
-import { useAgentState } from './hooks/useAgentState';
-import { useWebSocket } from './hooks/useWebSocket';
+// Import styles
+import './styles/components/chat.scss';
 
-// Import types
 interface AppError {
   message: string;
   stack?: string;
@@ -82,60 +74,23 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
-  // Initialize agent state and WebSocket
-  const {
-    agentStatus,
-    activeExecutions,
-    systemHealth,
-    thoughts,
-    updateAgentStatus
-  } = useAgentState();
-
-  const {
-    isConnected,
-    connectionState,
-    sendMessage
-  } = useWebSocket(
-    process.env.NODE_ENV === 'production' 
-      ? `wss://${window.location.host}/ws/autonomous` 
-      : 'ws://localhost:8080/ws/autonomous',
-    {
-      onMessage: updateAgentStatus,
-      onConnect: () => {
-        console.log('Connected to GitHub Dev Agent');
-        setConnectionError(null);
-      },
-      onDisconnect: () => {
-        console.log('Disconnected from GitHub Dev Agent');
-        setConnectionError('Połączenie zostało przerwane');
-      }
-    }
-  );
-
   // Initialize application
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Simulate initialization delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
         // Check backend health
-        const healthResponse = await fetch('/health');
+        const healthResponse = await fetch('/api/health');
         if (!healthResponse.ok) {
-          throw new Error('Backend nie jest dostępny');
+          console.warn('Backend health check failed, continuing anyway');
         }
         
-        const healthData = await healthResponse.json();
-        console.log('Backend health:', healthData);
+        // Simulate short loading time
+        await new Promise(resolve => setTimeout(resolve, 800));
         
         setIsLoading(false);
       } catch (error) {
         console.error('Initialization error:', error);
-        setConnectionError(
-          error instanceof Error 
-            ? error.message 
-            : 'Błąd inicjalizacji aplikacji'
-        );
+        // Don't block the UI for network errors
         setIsLoading(false);
       }
     };
@@ -143,63 +98,9 @@ const App: React.FC = () => {
     initializeApp();
   }, []);
 
-  // Handle agent query
-  const handleAgentQuery = (query: string, options?: any) => {
-    if (isConnected) {
-      sendMessage({
-        type: 'agent-query',
-        query,
-        options,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      console.error('Cannot send query: WebSocket not connected');
-    }
-  };
-
-  // Handle thought generation
-  const handleThoughtGenerated = (thought: any) => {
-    updateAgentStatus({
-      type: 'new-thought',
-      payload: thought
-    });
-  };
-
-  // Handle execution started
-  const handleExecutionStarted = (execution: any) => {
-    updateAgentStatus({
-      type: 'execution-update',
-      payload: {
-        ...execution,
-        id: execution.id || Date.now().toString(),
-        status: 'running',
-        startedAt: new Date()
-      }
-    });
-  };
-
   // Show loading screen
   if (isLoading) {
     return <LoadingSpinner />;
-  }
-
-  // Show connection error
-  if (connectionError && connectionState === 'disconnected') {
-    return (
-      <div className="connection-error">
-        <div className="error-container">
-          <div className="error-icon">🔌</div>
-          <h2>Problem z połączeniem</h2>
-          <p>{connectionError}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="retry-button"
-          >
-            Spróbuj ponownie
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -213,109 +114,28 @@ const App: React.FC = () => {
       }}
     >
       <div className="app">
-        <AnimatePresence mode="wait">
-          <Routes>
-            {/* Main Agent Interface */}
-            <Route 
-              path="/" 
-              element={
-                <AgentCommandCenter
-                  agentStatus={agentStatus}
-                  systemHealth={systemHealth}
-                  isConnected={isConnected}
-                  onQuery={handleAgentQuery}
-                >
-                  {/* Left Panel - Brain & Thinking */}
-                  <div className="left-panel">
-                    <div className="brain-section">
-                      {/* Brain visualization will be here */}
-                    </div>
-                    
-                    <ThinkingProcess
-                      thoughts={thoughts}
-                      isVisible={true}
-                      showMetrics={true}
-                    />
-                  </div>
-
-                  {/* Center Panel - Chat Interface */}
-                  <div className="center-panel">
-                    <EnhancedChatInterface
-                      agentStatus={agentStatus}
-                      onThoughtGenerated={handleThoughtGenerated}
-                      onExecutionStarted={handleExecutionStarted}
-                    />
-                  </div>
-
-                  {/* Right Panel - Execution & Health */}
-                  <div className="right-panel">
-                    <ExecutionPipeline
-                      executions={activeExecutions}
-                    />
-                    
-                    <SystemHealthMonitor
-                      health={systemHealth}
-                      isExpanded={false}
-                    />
-                    
-                    <LearningInsights
-                      learningProgress={agentStatus.learningProgress}
-                    />
-                  </div>
-                </AgentCommandCenter>
-              } 
-            />
-
-            {/* Health Dashboard */}
-            <Route 
-              path="/health" 
-              element={
-                <div className="health-dashboard">
-                  <SystemHealthMonitor
-                    health={systemHealth}
-                    isExpanded={true}
-                  />
+        <div className="app-container">
+          <header className="app-header">
+            <div className="header-content">
+              <div className="logo">
+                <div className="logo-icon">🤖</div>
+                <h1 className="app-title">GitHub Dev Agent</h1>
+              </div>
+              
+              <div className="header-info">
+                <div className="status-indicator">
+                  <div className="status-dot active" />
+                  <span>Gotowy</span>
                 </div>
-              } 
-            />
-
-            {/* Learning Analytics */}
-            <Route 
-              path="/learning" 
-              element={
-                <div className="learning-dashboard">
-                  <LearningInsights
-                    learningProgress={agentStatus.learningProgress}
-                  />
-                </div>
-              } 
-            />
-
-            {/* Execution Monitor */}
-            <Route 
-              path="/executions" 
-              element={
-                <div className="execution-dashboard">
-                  <ExecutionPipeline
-                    executions={activeExecutions}
-                  />
-                </div>
-              } 
-            />
-
-            {/* Redirect unknown routes */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AnimatePresence>
-
-        {/* Connection Status Indicator */}
-        <div className={`connection-status ${connectionState}`}>
-          <div className="status-dot" />
-          <span className="status-text">
-            {connectionState === 'connected' ? 'Połączono' :
-             connectionState === 'connecting' ? 'Łączenie...' :
-             'Rozłączono'}
-          </span>
+              </div>
+            </div>
+          </header>
+          
+          <main className="app-main">
+            <div className="chat-container">
+              <SimpleChatInterface />
+            </div>
+          </main>
         </div>
       </div>
     </ErrorBoundary>
