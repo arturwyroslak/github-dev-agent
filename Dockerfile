@@ -19,8 +19,9 @@ COPY backend/package.json ./
 # Install dependencies ignoring peer deps
 RUN npm install --no-package-lock --legacy-peer-deps && npm cache clean --force
 
-# Copy backend source
-COPY backend/ .
+# Copy backend source (excluding node_modules to preserve installed deps)
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
 
 # Build backend
 RUN npm run build
@@ -40,7 +41,12 @@ COPY frontend/package.json ./
 
 RUN npm install --no-package-lock --legacy-peer-deps && npm cache clean --force
 
-COPY frontend/ .
+# Copy frontend source (excluding node_modules to preserve installed deps)
+COPY frontend/src ./src
+COPY frontend/index.html ./
+COPY frontend/vite.config.ts ./
+COPY frontend/tsconfig.json ./
+COPY frontend/tsconfig.node.json ./
 
 RUN npm run build
 

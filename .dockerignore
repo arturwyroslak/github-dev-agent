@@ -123,8 +123,6 @@ scripts/
 nginx/
 
 # Development and testing
-frontend/src/
-backend/src/
 *.test.js
 *.test.ts
 *.spec.js
