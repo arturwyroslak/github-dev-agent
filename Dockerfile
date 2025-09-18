@@ -69,9 +69,7 @@ RUN apk add --no-cache \
     curl \
     ca-certificates \
     && rm -rf /var/cache/apk/* \
-    && echo 'fs.file-max = 2097152' >> /etc/sysctl.conf \
-    && echo 'nextjs soft nofile 65536' >> /etc/security/limits.conf \
-    && echo 'nextjs hard nofile 65536' >> /etc/security/limits.conf
+    && echo 'fs.file-max = 2097152' >> /etc/sysctl.conf
 
 WORKDIR /app
 
