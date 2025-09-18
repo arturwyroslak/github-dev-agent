@@ -1,252 +1,220 @@
-# 🤖 AI Developer Agent
+# GitHub Dev Agent 🤖
 
-Nowoczesna webowa aplikacja wykorzystująca GitHub MCP (Model Context Protocol) server do wykonywania operacji na GitHub w imieniu użytkownika.
+Inteligentny agent developerski z integracjią GitHub, zaprojektowany do automatyzacji zadań programistycznych i zarządzania projektami.
 
-## 🎯 Opis Funkcjonalny
+## ✨ Nowe Funkcje
 
-**AI Developer Agent** to zaawansowane narzędzie, które działa jako most między użytkownikiem a GitHub API, wykorzystując Model Context Protocol do inteligentnego zarządzania repozytoriami, issues, pull requestami i innymi operacjami GitHub.
+### Ulepszony Interfejs
+- **Czysty interfejs chatu** - skupiony na najważniejszej funkcjonalności
+- **Usunięto zbędne panele** - bez imitacji zaawansowanych funkcji
+- **Responsywny design** - pełna responsywność na wszystkich urządzeniach
+- **Nowoczesne style** - ciemny motyw z gradientami i animacjami
 
-### Główne Funkcjonalności
-
-#### 🏗️ Zarządzanie Repozytoriami
-- Tworzenie, forkowanie i usuwanie repozytoriów
-- Oznaczanie gwiazdką i zarządzanie obserwowanymi repozytoriami
-- Kompletne zarządzanie strukturą projektu
-
-#### 📁 Operacje na Plikach
-- Tworzenie, edycja i usuwanie plików
-- Bulk operacje (push_files)
-- Przeglądanie zawartości plików
-
-#### 🌿 Zarządzanie Gałęziami
-- Tworzenie i zarządzanie branżami
-- Przegląd historii commitów
-- Operacje merge i rebase
-
-#### 🐛 Issues i Sub-Issues
-- Tworzenie, edycja i zamykanie issues
-- Hierarchiczne zarządzanie sub-issues
-- Przypisywanie Copilot do automatyzacji
-- Priorytetyzacja i organizacja zadań
-
-#### 🔄 Pull Requests
-- Tworzenie PR z integracją Copilot
-- Zarządzanie reviewami i komentarzami
-- Automatyczne merge i status tracking
-- Diff viewer i analiza zmian
-
-#### ⚙️ Workflows i Actions
-- Uruchamianie i monitorowanie workflow
-- Zarządzanie artefaktami i logami
-- Analiza wykorzystania zasobów
-- Retry mechanizmy dla failed jobs
-
-#### 🔍 Wyszukiwanie i Analiza
-- Zaawansowane wyszukiwanie kodu
-- Znajdowanie repozytoriów, użytkowników, organizacji
-- Filtrowanie issues i pull requestów
-
-#### 🔔 Powiadomienia
-- Centralne zarządzanie notyfikacjami
-- Subskrypcje repozytoriów
-- Audyt aktywności
-
-#### 🔒 Bezpieczeństwo
-- Code scanning alerts
-- Secret scanning
-- Dependabot integration
-- Security advisories
+### Interface Chatu
+- **Prosty i funkcjonalny** - bez skomplikowanych elementów wizualnych
+- **Markdown support** - pełne wsparcie dla formatowania
+- **Syntax highlighting** - podświetlanie składni kodu
+- **Auto-resize textarea** - automatyczne dopasowanie wysokości
+- **Loading indicators** - wizualne wskazniki ładowania
+- **Error handling** - obsługa błędów z user-friendly komunikatami
 
 ## 🏗️ Architektura
 
 ### Frontend
-```
-React 18 + TypeScript
-├── Redux Toolkit (state management)
-├── Material-UI v5 (component library)  
-├── Styled Components (styling)
-├── Vite (build tool)
-└── React Router (routing)
-```
+- **React 18 + TypeScript** - nowoczesny stack frontend
+- **Vite** - szybki build tool
+- **SCSS** - zaawansowane style
+- **Lucide Icons** - spójne ikony
+- **React Markdown** - renderowanie Markdown
+- **Syntax Highlighter** - podświetlanie kodu
 
 ### Backend
-```
-Node.js 18 + NestJS 9
-├── PostgreSQL (database)
-├── TypeORM (ORM)
-├── OAuth 2.0 (GitHub authentication)
-├── MCP Integration Layer
-└── OpenTelemetry (observability)
-```
+- **Python FastAPI** - szybkie API
+- **WebSocket** - komunikacja w czasie rzeczywistym
+- **GitHub API** - integracja z GitHub
+- **Docker** - konteneryzacja
 
-### MCP Integration
-```
-Model Context Protocol Server
-├── Advanced Prompt Engineering
-├── Context Orchestration
-├── Rate Limiting & Throttling
-├── Audit & Compliance
-└── Real-time Status Updates
-```
+## 🚀 Szybki Start
 
-## 🎨 Design System
+### Wymagania
+- Docker i Docker Compose
+- Git
+- GitHub token (opcjonalnie)
 
-### Paleta Kolorów
-- **Primary**: #5B8CFF
-- **Secondary**: #00C2A8, #F59E0B  
-- **Success**: #28A745
-- **Warning**: #FFC107
-- **Error**: #DC3545
-- **Info**: #0D6EFD
+### Instalacja
 
-### Typografia
-- **Font**: Inter, system fonts
-- **Hierarchy**: H1 32px, H2 24px, H3 20px, Body 16px
-- **Weights**: 300, 400, 500, 600, 700
-
-### Komponenty
-- Responsive design (320px - 1440px+)
-- Accessibility compliance (WCAG 2.1)
-- Dark/Light mode support
-- Micro-interactions i animacje
-
-## 🚀 Funkcjonalności
-
-### Chat-like Interface
-- Konwersacyjny interface do wydawania poleceń
-- Inteligentne prompt engineering
-- Kontekstowa historia operacji
-- Auto-suggestions i command completion
-
-### MCP Orchestration
-- Zaawansowana inżynieria instrukcji systemowych
-- Automatyczne tłumaczenie poleceń na GitHub API calls
-- Polityki uprawnień i bezpieczeństwa
-- Retry logic z exponential backoff
-
-### Real-time Updates
-- WebSocket connections dla live updates
-- Progress tracking dla długotrwałych operacji  
-- Status indicators i notyfikacje
-- Activity feed i audit logs
-
-### Security & Compliance
-- OAuth 2.0 integration z GitHub
-- Encrypted token storage
-- Rate limiting compliance
-- Audit trail wszystkich operacji
-
-## 📱 Responsive Design
-
-### Breakpoints
-- **Mobile**: 320px - 767px
-- **Tablet**: 768px - 1023px  
-- **Desktop**: 1024px - 1439px
-- **Large Desktop**: 1440px+
-
-### Adaptive Features
-- Collapsible sidebar na mobile
-- Touch-optimized controls
-- Fluid typography
-- Contextual navigation
-
-## 🔧 Instalacja i Uruchomienie
-
+1. **Klonowanie repozytorium**
 ```bash
-# Klonowanie repozytorium
 git clone https://github.com/arturwyroslak/github-dev-agent.git
 cd github-dev-agent
+```
 
-# Instalacja dependencies
-npm install
-
-# Setup środowiska
+2. **Konfiguracja środowiska**
+```bash
 cp .env.example .env
-# Skonfiguruj GitHub OAuth App i database
+# Edytuj .env i uzupełnij niezbędne zmienne
+```
 
-# Uruchomienie development
+3. **Uruchomienie z Docker Compose**
+```bash
+# Wersja rozwojowa
+docker-compose up -d
+
+# Wersja produkcyjna
+docker-compose -f docker-compose.production.yml up -d
+
+# Wersja uproszczona (tylko chat)
+docker-compose -f docker-compose.simple.yml up -d
+```
+
+4. **Otwórz przeglądarkę**
+```
+http://localhost:3000
+```
+
+## 🛠️ Rozwoj
+
+### Tryb Developerski
+
+```bash
+# Frontend
+cd frontend
+npm install
 npm run dev
+
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-## 🧪 Testowanie
+### Struktura Projektów
 
-```bash
-# Unit tests
-npm run test
-
-# E2E tests  
-npm run test:e2e
-
-# Coverage report
-npm run test:coverage
+```
+github-dev-agent/
+├── frontend/              # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── chat/          # Chat interface
+│   │   │       └── SimpleChatInterface.tsx
+│   │   └── styles/         # SCSS styles
+│   │       ├── globals.scss
+│   │       └── components/
+│   │           └── chat.scss
+│   └── package.json
+├── backend/               # Python backend
+│   ├── main.py
+│   └── requirements.txt
+├── nginx/                # Nginx config
+└── docker-compose.yml    # Docker setup
 ```
 
-## 🏭 Deployment
+## 📚 API
 
-### Quick Start
-```bash
-# Simple deployment (recommended for Dokploy)
-docker compose -f docker-compose.simple.yml up -d
+### Endpoints
 
-# Full production deployment
-docker compose up -d
+- `GET /api/health` - Status zdrowia aplikacji
+- `POST /api/chat` - Wysyłanie wiadomości do agenta
+- `WebSocket /ws/chat` - Komunikacja w czasie rzeczywistym
+
+### Przykład Użycia API
+
+```javascript
+// Wysyłanie wiadomości
+const response = await fetch('/api/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    message: 'Stwórz komponent React do wyświetlania listy',
+    history: []
+  })
+});
+
+const data = await response.json();
+console.log(data.response);
 ```
 
-### Docker Configuration Options
+## 🔧 Konfiguracja
 
-We provide multiple Docker configurations to address common deployment issues:
+### Zmienne Środowiskowe
 
-1. **docker-compose.simple.yml** - Minimal setup, avoids network conflicts
-2. **docker-compose.yml** - Full setup with monitoring and proxy
-3. **docker-compose.production.yml** - Production overrides
-
-For detailed deployment instructions and troubleshooting, see [Docker Deployment Guide](./DOCKER_DEPLOYMENT.md).
-
-### Environment Variables
 ```env
-# GitHub OAuth
-GITHUB_CLIENT_ID=your_client_id
-GITHUB_CLIENT_SECRET=your_client_secret
+# GitHub
+GITHUB_TOKEN=ghp_your_token_here
+GITHUB_USERNAME=your_username
 
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/github_dev_agent
+# API
+API_HOST=0.0.0.0
+API_PORT=8080
 
-# MCP Server
-MCP_SERVER_URL=http://localhost:8080
-MCP_API_KEY=your_mcp_api_key
-
-# Security
-JWT_SECRET=your_jwt_secret
-ENCRYPTION_KEY=your_encryption_key
+# Frontend
+VITE_API_URL=http://localhost:8080
 ```
 
-## 📊 Monitoring i Observability
+### Docker Configuration
 
-- **Metrics**: Prometheus + Grafana
-- **Logging**: Structured logging z OpenTelemetry
-- **Tracing**: Distributed tracing
-- **Health Checks**: Liveness i readiness probes
-- **Performance**: Web vitals tracking
+```yaml
+# docker-compose.simple.yml - Uproszczona wersja
+version: '3.8'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+  
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+```
 
-## 🤝 Contributing
+## 📋 TODO
 
-1. Fork repozytorium
-2. Utwórz feature branch (`git checkout -b feature/amazing-feature`)  
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push branch (`git push origin feature/amazing-feature`)
+- [ ] Backend API implementation
+- [ ] GitHub API integration
+- [ ] WebSocket real-time communication
+- [ ] User authentication
+- [ ] Project management features
+- [ ] Code analysis tools
+- [ ] Automated testing
+- [ ] CI/CD integration
+
+## 👍 Contributing
+
+1. Fork projektu
+2. Stwórz branch feature (`git checkout -b feature/amazing-feature`)
+3. Commit zmian (`git commit -m 'Add amazing feature'`)
+4. Push do branch (`git push origin feature/amazing-feature`)
 5. Otwórz Pull Request
 
-## 📄 Licencja
+## 📜 Licencja
 
-MIT License - zobacz [LICENSE](LICENSE) file.
+Ten projekt jest licencjonowany na licencji MIT - zobacz plik [LICENSE](LICENSE) po szczegóły.
 
-## 🙏 Acknowledgments
+## 🚀 Roadmap
 
-- GitHub API Team
-- Model Context Protocol Community  
-- React i NestJS Communities
-- Open Source Contributors
+### v1.1 - Podstawowy Chat (Aktualna)
+- ✅ Czysty interfejs chatu
+- ✅ Markdown support
+- ✅ Responsywny design
+- ✅ Error handling
+
+### v1.2 - Backend Integration
+- ⏳ API backend implementation
+- ⏳ GitHub API integration
+- ⏳ Real-time WebSocket
+
+### v1.3 - Advanced Features
+- ⏳ Code analysis
+- ⏳ Project management
+- ⏳ Automated workflows
 
 ---
 
-**Zbudowane z ❤️ dla developer community**
+**GitHub Dev Agent** - Twój inteligentny partner w rozwoju oprogramowania! 💻✨
