@@ -57,17 +57,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-  # Remove nginx from default deployment - use platform's reverse proxy
-  nginx:
-    profiles:
-      - disabled
-
-  # Remove monitoring from default deployment
-  prometheus:
-    profiles:
-      - disabled
-      
-  grafana:
-    profiles:
-      - disabled

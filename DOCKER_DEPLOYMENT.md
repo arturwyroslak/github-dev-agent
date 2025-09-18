@@ -18,6 +18,21 @@ tail: inotify cannot be used, reverting to polling: Too many open files
 
 ## 📦 Deployment Options
 
+### Pre-deployment Validation
+
+Before deploying, run our configuration test script:
+
+```bash
+./scripts/test-docker-config.sh
+```
+
+This script will:
+- ✅ Validate all Docker configurations
+- 🔍 Check for common deployment issues
+- 💾 Verify system resources (memory, file descriptors)
+- 🌐 Detect potential network conflicts
+- 📋 Provide deployment recommendations
+
 ### Option 1: Simple Deployment (Recommended for Dokploy)
 
 Use the simplified configuration that avoids network conflicts:
