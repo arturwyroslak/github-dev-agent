@@ -1,0 +1,73 @@
+# Production override for Dokploy and similar platforms
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.production.yml up
+
+services:
+  # Main application with production optimizations
+  app:
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    environment:
+      # Override for production
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=1536 --max-http-header-size=8192
+      - UV_THREADPOOL_SIZE=128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Remove nginx from default deployment - use platform's reverse proxy
+  nginx:
+    profiles:
+      - disabled
+
+  # Remove monitoring from default deployment
+  prometheus:
+    profiles:
+      - disabled
+      
+  grafana:
+    profiles:
+      - disabled

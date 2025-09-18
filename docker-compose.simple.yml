@@ -1,0 +1,147 @@
+# Minimal docker-compose for Dokploy and similar platforms
+# This avoids network conflicts and includes essential services only
+
+services:
+  # GitHub Dev Agent Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: github-dev-agent
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://postgres:github_agent_pass@postgres:5432/github_dev_agent
+      - REDIS_URL=redis://redis:6379
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key_here_minimum_32_characters}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-your_encryption_key_here_exactly_32_characters}
+      - MCP_ENABLED=true
+      - MCP_PLAYWRIGHT=true
+      - MCP_CONTEXT_PORTAL=true
+      - MCP_MEMORY_KEEPER=true
+      - NODE_OPTIONS=--max-old-space-size=1536 --max-http-header-size=8192
+      - UV_THREADPOOL_SIZE=128
+    volumes:
+      - app_logs:/app/logs
+      - app_tmp:/app/tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: github-dev-agent-db
+    environment:
+      - POSTGRES_DB=github_dev_agent
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=github_agent_pass
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d github_dev_agent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: github-dev-agent-redis
+    command: redis-server --appendonly yes --requirepass github_redis_pass --maxmemory 256mb --maxmemory-policy allkeys-lru
+    environment:
+      - REDIS_PASSWORD=github_redis_pass
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "github_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_tmp:
+    driver: local
+
+# Use default bridge network - no custom network configuration
+# This avoids subnet conflicts with existing networks

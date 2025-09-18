@@ -107,12 +107,52 @@ function createApp(): express.Application {
   // Health check
   app.get('/health', async (req, res) => {
     try {
+      // System health checks
+      const getSystemInfo = () => {
+        try {
+          const fs = require('fs');
+          const os = require('os');
+          
+          // Check file descriptor usage (Linux)
+          let fdInfo = null;
+          try {
+            const fdCount = fs.readdirSync('/proc/self/fd').length;
+            fdInfo = { current: fdCount, limit: 'unknown' };
+          } catch (err) {
+            fdInfo = { error: 'Cannot read /proc/self/fd' };
+          }
+          
+          return {
+            memory: {
+              used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+              total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+              external: Math.round(process.memoryUsage().external / 1024 / 1024),
+              rss: Math.round(process.memoryUsage().rss / 1024 / 1024)
+            },
+            system: {
+              cpus: os.cpus().length,
+              freeMem: Math.round(os.freemem() / 1024 / 1024),
+              totalMem: Math.round(os.totalmem() / 1024 / 1024),
+              loadAverage: os.loadavg()[0],
+              platform: os.platform(),
+              arch: os.arch()
+            },
+            fileDescriptors: fdInfo,
+            nodeVersion: process.version,
+            pid: process.pid
+          };
+        } catch (error) {
+          return { error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+      };
+
       const health = {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         version: process.env.npm_package_version || '1.0.0',
         environment: config.nodeEnv,
+        system: getSystemInfo(),
         services: {
           ai: await codingAgent.healthCheck(),
           mcp: config.mcp.enabled ? await mcpManager?.areAllServersHealthy() : null
@@ -306,11 +346,59 @@ process.on('SIGINT', async () => {
 });
 
 /**
+ * System checks and optimizations
+ */
+function performSystemChecks(): void {
+  try {
+    const fs = require('fs');
+    const os = require('os');
+    
+    // Check file descriptor limits
+    try {
+      const fdCount = fs.readdirSync('/proc/self/fd').length;
+      logger.info(`Current file descriptors: ${fdCount}`);
+      
+      if (fdCount > 1000) {
+        logger.warn(`High number of file descriptors in use: ${fdCount}`);
+      }
+    } catch (err) {
+      logger.debug('Cannot check file descriptors (non-Linux system)');
+    }
+    
+    // Check memory
+    const memoryUsage = process.memoryUsage();
+    logger.info(`Memory usage - RSS: ${Math.round(memoryUsage.rss / 1024 / 1024)}MB, Heap: ${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`);
+    
+    // Check system resources
+    const freeMem = Math.round(os.freemem() / 1024 / 1024);
+    const totalMem = Math.round(os.totalmem() / 1024 / 1024);
+    logger.info(`System memory - Free: ${freeMem}MB, Total: ${totalMem}MB`);
+    
+    if (freeMem < 256) {
+      logger.warn('Low system memory available, performance may be affected');
+    }
+    
+    // Node.js optimizations
+    if (process.env.UV_THREADPOOL_SIZE) {
+      logger.info(`UV_THREADPOOL_SIZE: ${process.env.UV_THREADPOOL_SIZE}`);
+    } else {
+      logger.warn('UV_THREADPOOL_SIZE not set, using default (4)');
+    }
+    
+  } catch (error) {
+    logger.error('System checks failed:', error);
+  }
+}
+
+/**
  * Start the server
  */
 async function startServer(): Promise<void> {
   try {
     logger.info('Starting GitHub Dev Agent Server...');
+    
+    // Perform system checks
+    performSystemChecks();
     
     // Initialize MCP if enabled
     await initializeMCP();

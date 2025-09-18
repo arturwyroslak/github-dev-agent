@@ -183,17 +183,24 @@ npm run test:coverage
 
 ## 🏭 Deployment
 
-### Production Build
+### Quick Start
 ```bash
-npm run build
-npm run preview
+# Simple deployment (recommended for Dokploy)
+docker compose -f docker-compose.simple.yml up -d
+
+# Full production deployment
+docker compose up -d
 ```
 
-### Docker
-```bash
-docker build -t github-dev-agent .
-docker run -p 3000:3000 github-dev-agent
-```
+### Docker Configuration Options
+
+We provide multiple Docker configurations to address common deployment issues:
+
+1. **docker-compose.simple.yml** - Minimal setup, avoids network conflicts
+2. **docker-compose.yml** - Full setup with monitoring and proxy
+3. **docker-compose.production.yml** - Production overrides
+
+For detailed deployment instructions and troubleshooting, see [Docker Deployment Guide](./DOCKER_DEPLOYMENT.md).
 
 ### Environment Variables
 ```env

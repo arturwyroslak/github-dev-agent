@@ -73,15 +73,8 @@ test-results
 
 # Documentation
 docs
-*.md
-README.md
 CHANGELOG.md
 LICENSE
-
-# Docker
-Dockerfile*
-docker-compose*
-.dockerignore
 
 # CI/CD
 .github
@@ -123,3 +116,22 @@ Jenkinsfile
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Monitoring and deployment files
+monitoring/
+scripts/
+nginx/
+
+# Development and testing
+frontend/src/
+backend/src/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+tests/
+test/
+
+# Package lock files (using --no-package-lock)
+package-lock.json
+yarn.lock
