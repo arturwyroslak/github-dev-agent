@@ -29,31 +29,45 @@ const monitoringLimiter = rateLimit({
 });
 
 // WebSocket server dla real-time monitoring
-const wss = new WebSocket.Server({ port: 8081 });
+let wss: WebSocket.Server | null = null;
 const activeConnections = new Map<string, WebSocket>();
 
-wss.on('connection', (ws: WebSocket, req) => {
-  const connectionId = uuidv4();
-  activeConnections.set(connectionId, ws);
+// Function to setup WebSocket server with the main HTTP server
+export function setupAutonomousWebSocket(server: any): WebSocket.Server {
+  if (wss) {
+    return wss;
+  }
   
-  logger.info(`New WebSocket connection: ${connectionId}`);
-  
-  ws.send(JSON.stringify({
-    type: 'connected',
-    connectionId,
-    message: 'Connected to Autonomous Agent monitoring'
-  }));
-  
-  ws.on('close', () => {
-    activeConnections.delete(connectionId);
-    logger.info(`WebSocket connection closed: ${connectionId}`);
+  wss = new WebSocket.Server({ 
+    server, // Use the main HTTP server
+    path: '/ws/autonomous' // Use a specific path for autonomous WebSocket
   });
   
-  ws.on('error', (error) => {
-    logger.error(`WebSocket error [${connectionId}]:`, error);
-    activeConnections.delete(connectionId);
+  wss.on('connection', (ws: WebSocket, req) => {
+    const connectionId = uuidv4();
+    activeConnections.set(connectionId, ws);
+    
+    logger.info(`New WebSocket connection: ${connectionId}`);
+    
+    ws.send(JSON.stringify({
+      type: 'connected',
+      connectionId,
+      message: 'Connected to Autonomous Agent monitoring'
+    }));
+    
+    ws.on('close', () => {
+      activeConnections.delete(connectionId);
+      logger.info(`WebSocket connection closed: ${connectionId}`);
+    });
+    
+    ws.on('error', (error) => {
+      logger.error(`WebSocket error [${connectionId}]:`, error);
+      activeConnections.delete(connectionId);
+    });
   });
-});
+  
+  return wss;
+}
 
 // Funkcja do broadcastowania updateów
 function broadcastUpdate(type: string, data: any) {
@@ -891,7 +905,9 @@ router.use('/ws-info', (req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
-      websocketUrl: 'ws://localhost:8081',
+      websocketUrl: process.env.NODE_ENV === 'production' 
+        ? `wss://${req.get('host')}/ws/autonomous`
+        : 'ws://localhost:8080/ws/autonomous',
       activeConnections: activeConnections.size,
       supportedEvents: [
         'plan-created',
