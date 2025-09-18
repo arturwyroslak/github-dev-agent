@@ -29,11 +29,16 @@ export const AgentCommandCenter: React.FC<AgentCommandCenterProps> = ({ classNam
     updateAgentStatus 
   } = useAgentState();
   
-  const { isConnected, lastMessage } = useWebSocket('ws://localhost:8081', {
-    onMessage: (data) => {
-      updateAgentStatus(data);
+  const { isConnected, lastMessage } = useWebSocket(
+    process.env.NODE_ENV === 'production' 
+      ? `wss://${window.location.host}/ws/autonomous` 
+      : 'ws://localhost:8080/ws/autonomous',
+    {
+      onMessage: (data) => {
+        updateAgentStatus(data);
+      }
     }
-  });
+  );
 
   useEffect(() => {
     // Auto-focus na brain panel gdy agent myśli

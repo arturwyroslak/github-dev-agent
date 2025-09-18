@@ -11,7 +11,7 @@ import path from 'path';
 
 // Import routes
 import aiRoutes from './routes/ai';
-import autonomousRoutes from './routes/autonomous';
+import autonomousRoutes, { setupAutonomousWebSocket } from './routes/autonomous';
 
 // Import services
 import { Logger } from './utils/logger';
@@ -410,8 +410,12 @@ async function startServer(): Promise<void> {
     // Setup WebSocket
     const io = setupWebSocket(server);
     
-    // Store io instance for routes
+    // Setup Autonomous WebSocket
+    const autonomousWs = setupAutonomousWebSocket(server);
+    
+    // Store instances for routes
     (app as any).io = io;
+    (app as any).autonomousWs = autonomousWs;
     
     // Start listening
     server.listen(config.port, config.host, () => {
