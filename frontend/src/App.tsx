@@ -4,6 +4,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 // Import main components
 import { SimpleChatInterface } from './components/chat/SimpleChatInterface';
+import ChatSidebar from './components/layout/ChatSidebar';
 
 // Import styles
 import './styles/components/chat.scss';
@@ -72,7 +73,7 @@ const LoadingSpinner: React.FC = () => {
  */
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [sidebarSelected, setSidebarSelected] = useState('chat');
   
   // Initialize application
   useEffect(() => {
@@ -98,6 +99,10 @@ const App: React.FC = () => {
     initializeApp();
   }, []);
 
+  const startNewChat = () => {
+    window.location.reload();
+  };
+
   // Show loading screen
   if (isLoading) {
     return <LoadingSpinner />;
@@ -113,29 +118,14 @@ const App: React.FC = () => {
         window.location.reload();
       }}
     >
-      <div className="app">
-        <div className="app-container">
-          <header className="app-header">
-            <div className="header-content">
-              <div className="logo">
-                <div className="logo-icon">🤖</div>
-                <h1 className="app-title">GitHub Dev Agent</h1>
-              </div>
-              
-              <div className="header-info">
-                <div className="status-indicator">
-                  <div className="status-dot active" />
-                  <span>Gotowy</span>
-                </div>
-              </div>
-            </div>
-          </header>
-          
-          <main className="app-main">
-            <div className="chat-container">
-              <SimpleChatInterface />
-            </div>
-          </main>
+      <div className="app" style={{
+        display: 'flex',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #191924 0%, #201946 100%)'
+      }}>
+        <ChatSidebar onNewChat={startNewChat} selected={sidebarSelected} />
+        <div className="app-main" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <SimpleChatInterface />
         </div>
       </div>
     </ErrorBoundary>
