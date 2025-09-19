@@ -1,530 +1,374 @@
-import React, { useState, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React, { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
-  id: string;
-  type: 'user' | 'assistant';
+  id: number;
   content: string;
+  role: "user" | "assistant";
   timestamp: Date;
 }
 
-interface ApiResponse {
+interface ChatResponse {
   success: boolean;
-  data: {
+  data?: {
+    success: boolean;
     content: string;
-    intent?: string;
-    suggestions?: string[];
-    metadata?: any;
+    intent: string;
+    metadata: {
+      sessionId: string;
+      timestamp: string;
+    };
   };
-  sessionId?: string;
+  error?: string;
 }
 
-export const SimpleChatInterface: React.FC = () => {
+const SimpleChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-  
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  
-  const handleSendMessage = async () => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
-    
+
     const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
+      id: Date.now(),
       content: inputValue.trim(),
-      timestamp: new Date()
+      role: "user",
+      timestamp: new Date(),
     };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
     setIsLoading(true);
-    
+
     try {
-      // Fixed: Use correct backend endpoint /api/ai/chat
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: userMessage.content, // Backend expects 'query', not 'message'
-          sessionId: sessionId || undefined,
-          options: {
-            language: 'typescript',
-            framework: 'react'
-          }
-        })
+          query: userMessage.content,  // Backend oczekuje 'query' nie 'message'
+        }),
       });
+
+      if (!response.ok) throw new Error("HTTP error " + response.status);
+
+      const result: ChatResponse = await response.json();
+
+      let assistantContent = "";
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (result.success && result.data && result.data.success) {
+        assistantContent = result.data.content;
+      } else if (result.data && !result.data.success) {
+        assistantContent = result.data.content || "Wystąpił błąd podczas przetwarzania zapytania.";
+      } else {
+        assistantContent = "Przepraszam, nie mogę w tej chwili odpowiedzieć. Spróbuj ponownie.";
       }
-      
-      const data: ApiResponse = await response.json();
-      
-      // Set sessionId if returned
-      if (data.sessionId && !sessionId) {
-        setSessionId(data.sessionId);
-      }
-      
+
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: data.success ? data.data.content : 'Wystąpił błąd podczas przetwarzania.',
-        timestamp: new Date()
+        id: Date.now() + 1,
+        content: assistantContent,
+        role: "assistant",
+        timestamp: new Date(),
       };
-      
-      setMessages(prev => [...prev, assistantMessage]);
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: 'Przepraszam, wystąpił błąd podczas komunikacji z serwerem. Spróbuj ponownie.',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.error('Chat error:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          content: "Błąd komunikacji z serwerem. Sprawdź połączenie i spróbuj ponownie.",
+          role: "assistant",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+
+  const handleCopy = (content: string, id: number) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1200);
   };
-  
-  const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-    }
-  };
-  
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [inputValue]);
-  
+
   return (
-    <div className="simple-chat">
-      {/* Chat Header */}
-      <div className="chat-header">
-        <div className="header-content">
-          <div className="logo">
-            <div className="logo-icon">🤖</div>
-            <h1 className="app-title">GitHub Dev Agent</h1>
-          </div>
-          
-          <div className="header-info">
-            <div className="status-indicator">
-              <div className="status-dot active" />
-              <span>Gotowy</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Chat Messages */}
-      <div className="chat-messages">
+    <div className="__chat-main">
+      <header className="__chat-header">
+        <span>🤖</span> <span>GitHub Dev Agent</span>
+      </header>
+      <main className="__chat-body">
         {messages.length === 0 && (
-          <div className="welcome-message">
+          <div className="__chat-welcome">
             <h3>👋 Witaj w GitHub Dev Agent</h3>
-            <p>Jestem Twoim asystentem programistycznym. Mogę pomóc w:</p>
-            <ul>
-              <li>Analizie i refaktoryzacji kodu</li>
-              <li>Debugowaniu problemów</li>
-              <li>Projektowaniu architektury aplikacji</li>
-              <li>Implementacji nowych funkcji</li>
-              <li>Optymalizacji wydajności</li>
-            </ul>
-            <p>Zadaj mi pytanie lub opisz problem z którym się zmagasz!</p>
+            <p style={{ color: "#b1b1e3" }}>
+              Twój asystent programistyczny. Zadaj pytanie dotyczące kodu, architektury lub problemów deweloperskich.
+            </p>
           </div>
         )}
-        
-        {messages.map((message) => (
-          <div key={message.id} className={`message message-${message.type}`}>
-            <div className="message-header">
-              <span className="role">
-                {message.type === 'user' ? '👤 Ty' : '🤖 Dev Agent'}
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`__chat-msg ${msg.role === "user" ? "user" : "assistant"}`}
+          >
+            <div className="__chat-msg-meta">
+              <span className="__avatar">
+                {msg.role === "user" ? "👤" : "🤖"}
               </span>
-              <span className="timestamp">
-                {message.timestamp.toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
+              <span className="__who">
+                {msg.role === "user" ? "Ty" : "Dev Agent"}
               </span>
+              <span className="__t">{formatTime(msg.timestamp)}</span>
+              {msg.role !== "user" && (
+                <button
+                  className="__copy-btn"
+                  onClick={() => handleCopy(msg.content, msg.id)}>
+                  📋
+                  {copiedId === msg.id && <span className="__copied-ind">Skopiowano!</span>}
+                </button>
+              )}
             </div>
-            <div className="message-content">
+            <div className="__chat-msg-content">
               <ReactMarkdown
                 components={{
-                  code({ node, inline, className, children, ...props }) {
-                    return inline ? (
-                      <code className="inline-code" {...props}>
-                        {children}
-                      </code>
-                    ) : (
-                      <pre className="code-block">
-                        <code {...props}>
-                          {children}
-                        </code>
-                      </pre>
-                    );
+                  code({ node, inline, children, ...props }) {
+                    return inline
+                      ? (
+                        <code className="inline-code" {...props}>{children}</code>
+                      ) : (
+                        <pre className="code-block">
+                          <code {...props}>{children}</code>
+                        </pre>
+                      );
                   },
                 }}
               >
-                {message.content}
+                {msg.content}
               </ReactMarkdown>
             </div>
           </div>
         ))}
-        
         {isLoading && (
-          <div className="message message-assistant loading">
-            <div className="message-header">
-              <span className="role">🤖 Dev Agent</span>
-              <span className="timestamp">myślę...</span>
+          <div className="__chat-msg assistant loading">
+            <div className="__chat-msg-meta">
+              <span className="__avatar">🤖</span>
+              <span className="__who">Dev Agent</span>
+              <span className="__t">myślę...</span>
             </div>
-            <div className="message-content">
+            <div className="__chat-msg-content">
               <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
               </div>
             </div>
           </div>
         )}
-        
         <div ref={messagesEndRef} />
-      </div>
-      
-      {/* Chat Input */}
-      <div className="chat-input">
-        <div className="input-container">
-          <textarea
-            ref={textareaRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Wpisz swoją wiadomość..."
-            rows={1}
-            disabled={isLoading}
-            className="message-textarea"
-          />
-          
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            className="send-button"
-            type="button"
-          >
-            {isLoading ? '⏳' : '📤'}
-          </button>
-        </div>
-      </div>
-      
+      </main>
+      <form className="__chat-form" onSubmit={handleSubmit}>
+        <input
+          className="__chat-in"
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Napisz wiadomość lub pytanie dotyczące kodu..."
+          disabled={isLoading}
+        />
+        <button
+          className="__chat-send"
+          type="submit"
+          disabled={!inputValue.trim() || isLoading}
+        >
+          {isLoading ? "..." : "Wyślij"}
+        </button>
+      </form>
       <style jsx>{`
-        .simple-chat {
-          display: flex;
-          flex-direction: column;
-          height: 100vh;
-          max-width: 100%;
-          margin: 0;
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-          color: #ffffff;
-        }
-        
-        .chat-header {
-          background: rgba(0, 0, 0, 0.3);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 15px 25px;
-        }
-        
-        .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .logo {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        
-        .logo-icon {
-          font-size: 1.8em;
-        }
-        
-        .app-title {
-          margin: 0;
-          font-size: 1.4em;
-          font-weight: 600;
-          background: linear-gradient(45deg, #64b3f4, #c2e59c);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        
-        .status-indicator {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.9em;
-          color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #4ade80;
-          animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        
-        .chat-messages {
-          flex: 1;
-          overflow-y: auto;
-          padding: 20px;
-          scroll-behavior: smooth;
-        }
-        
-        .welcome-message {
-          background: rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(10px);
-          border-radius: 15px;
-          padding: 30px;
-          text-align: center;
-          margin: 50px auto;
-          max-width: 600px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .welcome-message h3 {
-          margin-bottom: 15px;
-          font-size: 1.5em;
-          color: #64b3f4;
-        }
-        
-        .welcome-message ul {
-          text-align: left;
-          max-width: 400px;
-          margin: 20px auto;
-        }
-        
-        .welcome-message li {
-          margin: 8px 0;
-          color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .message {
-          margin-bottom: 25px;
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .message.message-user {
-          align-items: flex-end;
-        }
-        
-        .message.message-assistant {
-          align-items: flex-start;
-        }
-        
-        .message-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 8px;
-          font-size: 0.85em;
-          color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .role {
-          font-weight: 600;
-        }
-        
-        .timestamp {
-          font-size: 0.8em;
-        }
-        
-        .message-content {
-          background: rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(10px);
-          border-radius: 15px;
-          padding: 15px 20px;
-          max-width: 70%;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .message.message-user .message-content {
-          background: rgba(100, 179, 244, 0.15);
-          border: 1px solid rgba(100, 179, 244, 0.3);
-        }
-        
-        .message.message-assistant .message-content {
-          background: rgba(194, 229, 156, 0.1);
-          border: 1px solid rgba(194, 229, 156, 0.2);
-        }
-        
-        .inline-code {
-          background: rgba(0, 0, 0, 0.3);
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-family: 'JetBrains Mono', 'Consolas', monospace;
-          color: #ffd700;
-          font-size: 0.9em;
-        }
-        
-        .code-block {
-          background: rgba(0, 0, 0, 0.4);
-          padding: 15px;
-          border-radius: 8px;
-          overflow-x: auto;
-          margin: 10px 0;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .code-block code {
-          font-family: 'JetBrains Mono', 'Consolas', monospace;
-          color: #e6e6e6;
-          font-size: 0.9em;
-        }
-        
-        .typing-indicator {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        
-        .typing-indicator span {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.6);
-          animation: typing 1.4s ease-in-out infinite both;
-        }
-        
-        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0s; }
-        
-        @keyframes typing {
-          0%, 80%, 100% {
-            transform: scale(0);
-            opacity: 0.5;
-          }
-          40% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        
-        .chat-input {
-          background: rgba(0, 0, 0, 0.3);
-          backdrop-filter: blur(10px);
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 20px;
-        }
-        
-        .input-container {
-          display: flex;
-          gap: 15px;
-          max-width: 1000px;
-          margin: 0 auto;
-          align-items: flex-end;
-        }
-        
-        .message-textarea {
-          flex: 1;
-          min-height: 50px;
-          max-height: 120px;
-          padding: 15px 20px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.05);
-          color: white;
-          border-radius: 25px;
-          font-size: 16px;
-          outline: none;
-          resize: none;
-          backdrop-filter: blur(10px);
-          font-family: inherit;
-        }
-        
-        .message-textarea::placeholder {
-          color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .message-textarea:focus {
-          border-color: rgba(100, 179, 244, 0.6);
-          background: rgba(255, 255, 255, 0.08);
-          box-shadow: 0 0 20px rgba(100, 179, 244, 0.2);
-        }
-        
-        .send-button {
-          padding: 15px 25px;
-          background: linear-gradient(45deg, #64b3f4, #c2e59c);
-          color: white;
-          border: none;
-          border-radius: 25px;
-          cursor: pointer;
-          font-size: 16px;
-          font-weight: 600;
-          transition: all 0.3s ease;
-          min-width: 80px;
-          backdrop-filter: blur(10px);
-        }
-        
-        .send-button:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(100, 179, 244, 0.3);
-          background: linear-gradient(45deg, #5aa3e4, #b2d58c);
-        }
-        
-        .send-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          transform: none;
-          background: rgba(255, 255, 255, 0.1);
-        }
-        
-        .chat-messages::-webkit-scrollbar {
-          width: 8px;
-        }
-        
-        .chat-messages::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 4px;
-        }
-        
-        .chat-messages::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
-        }
-        
-        .chat-messages::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.3);
-        }
-      `}</style>
+      .__chat-main {
+        flex: 1;
+        min-width: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(155deg, #242850 55%, #1a1628 100%);
+        border-radius: 0 20px 20px 0;
+        box-shadow: 0 8px 70px #23235b17;
+      }
+      .__chat-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.15em;
+        color: #dbd1ff;
+        font-weight: 700;
+        height: 65px;
+        padding: 0 30px;
+        border-bottom: 2px solid #272856;
+        letter-spacing: 0.03em;
+      }
+      .__chat-body {
+        padding: 30px 4vw 0 4vw;
+        flex: 1;
+        overflow-y: auto;
+        transition: background 0.2s;
+      }
+      .__chat-welcome {
+        margin: 60px auto 0;
+        text-align: center;
+        color: #efeffaef;
+        padding: 34px 0 0 0;
+        opacity: .93;
+      }
+      .__chat-welcome h3 {
+        font-size: 1.3em;
+        margin-bottom: 16px;
+      }
+      .__chat-msg {
+        margin: 0 0 28px 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .__chat-msg.user {
+        align-items: flex-end;
+      }
+      .__chat-msg.assistant {
+        align-items: flex-start;
+      }
+      .__chat-msg-meta {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        color: #a7a7e1;
+        font-size: 0.85em;
+        margin-bottom: 3px;
+      }
+      .__avatar { font-size: 1.12em; }
+      .__who { font-weight: bold; }
+      .__t { opacity:.72 }
+      .__copy-btn {
+        margin-left: 0.5em;
+        background: none;
+        border: none;
+        color: #aaaaff;
+        cursor: pointer;
+        font-size: 1em;
+        position: relative;
+      }
+      .__copied-ind {
+        margin-left: 4px;
+        font-size: 0.91em;
+        color: #58e7d3;
+      }
+      .__chat-msg-content {
+        padding: 15px 20px;
+        border-radius: 17px;
+        background: rgba(56,33,110,0.22);
+        color: #ecf1ff;
+        box-shadow: 0 4px 12px #45459117;
+        font-size: 1.08em;
+        word-break: break-word;
+        max-width: 620px;
+      }
+      .__chat-msg.user .__chat-msg-content {
+        background: rgba(46,49,90,0.42);
+        color: #e0e5f8;
+        box-shadow: 0 2px 8px 2px #46477917;
+      }
+      .inline-code {
+        background: #23223788;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+        color: #f3d47c;
+      }
+      .code-block {
+        background: #15152c98;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 8px 0 0 0;
+        border: 1.3px solid #563d9393;
+        overflow-x: auto;
+        font-family: 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+        color: #dddbe3;
+      }
+      .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .typing-indicator span {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #cbc7f5b0;
+        animation: pulse 1.2s infinite both;
+      }
+      .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+      .typing-indicator span:nth-child(3) { animation-delay: -0.32s; }
+      @keyframes pulse {
+        0%, 80%, 100% { transform: scale(.6); opacity: 0.45; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+      .__chat-form {
+        display: flex; align-items: center; gap: 15px;
+        background: #272850a2;
+        padding: 20px 30px; border-top: 2px solid #262353;
+        z-index: 1;
+        position: relative;
+      }
+      .__chat-in {
+        flex: 1;
+        border: none;
+        border-radius: 23px;
+        padding: 15px 20px;
+        font-size: 1.14em;
+        background: #27273ba5;
+        color: #fff;
+        transition: border .12s;
+      }
+      .__chat-in:focus {
+        outline: none;
+        border: 2px solid #9b86eb;
+      }
+      .__chat-in::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .__chat-send {
+        background: linear-gradient(120deg, #7158e6 40%, #a649f7 100%);
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 11px 20px;
+        font-size: 1.06em;
+        cursor: pointer;
+        min-width: 85px;
+        font-weight: 600;
+        transition: background .14s, transform .14s;
+        transform: scale(1);
+      }
+      .__chat-send:disabled {
+        background: #4949679e;
+        opacity: .67;
+        cursor: not-allowed;
+      }
+      .__chat-send:not(:disabled):hover{
+        background:linear-gradient(120deg,#8a72ee 40%,#a858ff 100%);
+        transform:scale(1.07);
+      }
+      `}
+      </style>
     </div>
   );
 };
