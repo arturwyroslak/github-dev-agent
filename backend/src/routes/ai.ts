@@ -60,8 +60,11 @@ const getSmartFallback = (query: string): string => {
   else if (/api|endpoint|backend|server/.test(q)) category = 'api';
   else if (/frontend|react|ui|component/.test(q)) category = 'frontend';
   
-  const responses = fallbackResponses[category] || fallbackResponses.default;
-  return responses[Math.floor(Math.random() * responses.length)];
+  const responses = fallbackResponses[category] || fallbackResponses.default || [];
+  if (responses.length === 0) {
+    return "GitHub Dev Agent gotowy! Architektura, CI/CD, code review - w czym pomogę?";
+  }
+  return responses[Math.floor(Math.random() * responses.length)] || responses[0] || "GitHub Dev Agent gotowy! Architektura, CI/CD, code review - w czym pomogę?";
 };
 
 // Walidatory
